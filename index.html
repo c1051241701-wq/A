@@ -374,6 +374,13 @@ button:not(:disabled) {
   margin-bottom: 16px;
 }
 
+.caution-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 170px 132px;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
 .mnemonic-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -395,6 +402,51 @@ button:not(:disabled) {
 
 .mnemonic-card.pinned {
   border-color: var(--accent-border);
+}
+
+.caution-card.is-checked {
+  background: var(--surface-2);
+}
+
+.caution-card.is-checked .mnemonic-title,
+.caution-card.is-checked .mnemonic-content {
+  color: var(--muted);
+}
+
+.caution-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.caution-check {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: var(--surface);
+  color: transparent;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.caution-check .icon {
+  width: 15px;
+  height: 15px;
+}
+
+.caution-check:hover {
+  border-color: var(--accent);
+}
+
+.caution-check.checked {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
 }
 
 .mnemonic-card-head {
@@ -1742,6 +1794,10 @@ kbd {
     grid-template-columns: 1fr;
   }
 
+  .caution-controls {
+    grid-template-columns: 1fr;
+  }
+
   .mnemonic-card {
     min-height: 0;
     padding: 15px;
@@ -1969,6 +2025,9 @@ kbd {
       <button class="view-tab" type="button" data-view="mnemonics" role="tab" aria-selected="false">
         口诀本
       </button>
+      <button class="view-tab" type="button" data-view="cautions" role="tab" aria-selected="false">
+        做题注意
+      </button>
     </nav>
     <span class="view-hint" id="viewHint">题库、答题与笔记</span>
   </div>
@@ -2030,6 +2089,39 @@ kbd {
     </div>
 
     <div class="mnemonic-grid" id="mnemonicGrid"></div>
+  </section>
+
+  <section class="view-panel" id="cautionsView" hidden>
+    <div class="mnemonic-toolbar">
+      <div>
+        <h2>做题注意</h2>
+        <p>把审题、计算和选项里的坑，提前写成可执行的提醒。</p>
+      </div>
+      <button class="btn btn-primary" type="button" id="newCautionBtn">
+        <svg class="icon" aria-hidden="true"><use href="#icon-plus"></use></svg>
+        新建注意
+      </button>
+    </div>
+
+    <div class="caution-controls">
+      <div class="search-wrap">
+        <svg class="icon" aria-hidden="true"><use href="#icon-search"></use></svg>
+        <label class="sr-only" for="cautionSearch">搜索做题注意</label>
+        <input class="search" id="cautionSearch" type="search" autocomplete="off"
+               placeholder="搜索注意、学科或标签">
+        <button class="search-clear" id="clearCautionSearch" type="button" aria-label="清除搜索">
+          <svg class="icon" aria-hidden="true"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+      <select class="subject-select" id="cautionSubjectFilter" aria-label="按学科筛选注意"></select>
+      <select class="subject-select" id="cautionStatusFilter" aria-label="按状态筛选注意">
+        <option value="all">全部状态</option>
+        <option value="pending">待注意</option>
+        <option value="done">已注意</option>
+      </select>
+    </div>
+
+    <div class="mnemonic-grid" id="cautionGrid"></div>
   </section>
 
   <footer class="footer">
@@ -2118,6 +2210,33 @@ kbd {
     },
   ];
 
+  const DEMO_CAUTIONS = [
+    {
+      title: "先看最后问的是“正确”还是“错误”",
+      content: "题干再长，先扫一眼最后一句。问“错误的是”时，不要条件反射选正确项。",
+      subject: "通用",
+      tags: ["审题"],
+    },
+    {
+      title: "X 型题没有部分分",
+      content: "多选、少选、错选都不得分。只选自己能确定的选项，拿不准的不要硬凑。",
+      subject: "考试策略",
+      tags: ["X型题", "时间分配"],
+    },
+    {
+      title: "病例题先抓三件事",
+      content: "主诉和病程、生命体征、禁忌证。先定急危重，再选检查和治疗。",
+      subject: "临床思维",
+      tags: ["病例题"],
+    },
+    {
+      title: "计算结果检查单位和正负号",
+      content: "尤其是 mmol/L、mg/dL、ml/min 和阴离子间隙，算完回头看一眼单位。",
+      subject: "通用",
+      tags: ["计算", "单位"],
+    },
+  ];
+
   const els = {
     stats: document.getElementById("stats"),
     filters: document.getElementById("filters"),
@@ -2132,12 +2251,19 @@ kbd {
     backupBtn: document.getElementById("backupBtn"),
     practiceView: document.getElementById("practiceView"),
     mnemonicsView: document.getElementById("mnemonicsView"),
+    cautionsView: document.getElementById("cautionsView"),
     viewHint: document.getElementById("viewHint"),
     newMnemonicBtn: document.getElementById("newMnemonicBtn"),
+    newCautionBtn: document.getElementById("newCautionBtn"),
     mnemonicSearch: document.getElementById("mnemonicSearch"),
     clearMnemonicSearch: document.getElementById("clearMnemonicSearch"),
     mnemonicSubjectFilter: document.getElementById("mnemonicSubjectFilter"),
     mnemonicGrid: document.getElementById("mnemonicGrid"),
+    cautionSearch: document.getElementById("cautionSearch"),
+    clearCautionSearch: document.getElementById("clearCautionSearch"),
+    cautionSubjectFilter: document.getElementById("cautionSubjectFilter"),
+    cautionStatusFilter: document.getElementById("cautionStatusFilter"),
+    cautionGrid: document.getElementById("cautionGrid"),
     modalRoot: document.getElementById("modalRoot"),
     toastRoot: document.getElementById("toastRoot"),
     liveRegion: document.getElementById("liveRegion"),
@@ -2146,6 +2272,7 @@ kbd {
   const state = {
     questions: [],
     mnemonics: [],
+    cautions: [],
     currentId: null,
     filter: "all",
     subject: "all",
@@ -2164,6 +2291,10 @@ kbd {
     mnemonicQuery: "",
     mnemonicSubject: "all",
     editingMnemonicId: null,
+    cautionQuery: "",
+    cautionSubject: "all",
+    cautionStatus: "all",
+    editingCautionId: null,
     backupPreview: null,
   };
 
@@ -2328,6 +2459,15 @@ kbd {
     };
   }
 
+  function normalizeCaution(raw) {
+    const base = normalizeMnemonic(raw);
+    if (!base) return null;
+    return {
+      ...base,
+      checked: Boolean(raw.checked),
+    };
+  }
+
   function loadState() {
     try {
       const probe = "__cuotiben_probe__";
@@ -2353,7 +2493,12 @@ kbd {
         if (Array.isArray(data.mnemonics)) {
           state.mnemonics = data.mnemonics.map(normalizeMnemonic).filter(Boolean);
         }
-        if (data.view === "mnemonics") state.view = "mnemonics";
+        if (Array.isArray(data.cautions)) {
+          state.cautions = data.cautions.map(normalizeCaution).filter(Boolean);
+        }
+        if (data.view === "mnemonics" || data.view === "cautions") {
+          state.view = data.view;
+        }
       }
 
       if (state.questions.length && !state.questions.some((q) => q.id === state.currentId)) {
@@ -2370,9 +2515,10 @@ kbd {
       window.localStorage.setItem(
         STORAGE_KEY,
         JSON.stringify({
-          version: 2,
+          version: 3,
           questions: state.questions,
           mnemonics: state.mnemonics,
+          cautions: state.cautions,
           currentId: state.currentId,
           filter: state.filter,
           subject: state.subject,
@@ -2454,8 +2600,10 @@ kbd {
 
   function renderView() {
     const isMnemonics = state.view === "mnemonics";
-    els.practiceView.hidden = isMnemonics;
+    const isCautions = state.view === "cautions";
+    els.practiceView.hidden = isMnemonics || isCautions;
     els.mnemonicsView.hidden = !isMnemonics;
+    els.cautionsView.hidden = !isCautions;
     document.querySelectorAll(".view-tab").forEach((button) => {
       const active = button.dataset.view === state.view;
       button.classList.toggle("active", active);
@@ -2464,6 +2612,10 @@ kbd {
     if (isMnemonics) {
       const subjects = new Set(state.mnemonics.map((item) => item.subject));
       els.viewHint.textContent = `${state.mnemonics.length} 条口诀 · ${subjects.size} 个学科`;
+    } else if (isCautions) {
+      const pending = state.cautions.filter((item) => !item.checked).length;
+      const done = state.cautions.filter((item) => item.checked).length;
+      els.viewHint.textContent = `${pending} 条待注意 · ${done} 条已注意`;
     } else {
       els.viewHint.textContent = "题库、答题与笔记";
     }
@@ -2570,6 +2722,147 @@ kbd {
       .join("");
   }
 
+  function getFilteredCautions() {
+    const query = ui.cautionQuery.trim().toLowerCase();
+    return state.cautions
+      .filter((caution) => {
+        if (ui.cautionSubject !== "all" && caution.subject !== ui.cautionSubject) {
+          return false;
+        }
+        if (ui.cautionStatus === "pending" && caution.checked) return false;
+        if (ui.cautionStatus === "done" && !caution.checked) return false;
+        if (!query) return true;
+        const haystack = [
+          caution.title,
+          caution.content,
+          caution.subject,
+          caution.tags.join(" "),
+        ]
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(query);
+      })
+      .sort((a, b) => {
+        if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+        return b.updatedAt - a.updatedAt;
+      });
+  }
+
+  function renderCautions() {
+    const subjects = [
+      ...new Set(state.cautions.map((caution) => caution.subject)),
+    ].sort((a, b) => a.localeCompare(b, "zh-Hans-CN"));
+    if (ui.cautionSubject !== "all" && !subjects.includes(ui.cautionSubject)) {
+      ui.cautionSubject = "all";
+    }
+    els.cautionSubjectFilter.innerHTML =
+      `<option value="all">全部学科</option>` +
+      subjects
+        .map((subject) => `<option value="${escapeHtml(subject)}">${escapeHtml(subject)}</option>`)
+        .join("");
+    els.cautionSubjectFilter.value = ui.cautionSubject;
+    els.cautionSubjectFilter.disabled = state.cautions.length === 0;
+    els.cautionStatusFilter.value = ui.cautionStatus;
+    els.clearCautionSearch.classList.toggle("is-visible", Boolean(ui.cautionQuery));
+
+    const list = getFilteredCautions();
+    if (!state.cautions.length) {
+      els.cautionGrid.innerHTML = `
+        <div class="mnemonic-empty">
+          <svg class="empty-art" viewBox="0 0 120 120" fill="none" aria-hidden="true">
+            <circle cx="60" cy="60" r="30" stroke="currentColor" stroke-width="1.5"></circle>
+            <path d="M60 45v20M60 74h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+          </svg>
+          <h3>还没有做题注意</h3>
+          <p>把容易看错的题干、单位、选项或时间分配，写成一条可以照着执行的提醒。</p>
+          <div class="empty-actions">
+            <button class="btn btn-primary" type="button" data-caution-action="new">
+              ${icon("plus")}新建第一条注意
+            </button>
+            <button class="btn" type="button" data-caution-action="load-demo">载入示例注意</button>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    if (!list.length) {
+      els.cautionGrid.innerHTML = `
+        <div class="mnemonic-empty">
+          <h3>没有符合条件的注意</h3>
+          <p>换个学科或状态，或清除搜索词再试。</p>
+          <button class="btn" type="button" data-caution-action="clear-filter">清除筛选</button>
+        </div>
+      `;
+      return;
+    }
+
+    els.cautionGrid.innerHTML = list
+      .map((caution) => {
+        const date = new Date(caution.updatedAt).toLocaleDateString("zh-CN");
+        return `
+          <article class="mnemonic-card caution-card ${caution.checked ? "is-checked" : ""}">
+            <div class="mnemonic-card-head">
+              <div class="caution-main">
+                <button
+                  class="caution-check ${caution.checked ? "checked" : ""}"
+                  type="button"
+                  data-caution-action="toggle"
+                  data-id="${escapeHtml(caution.id)}"
+                  aria-label="${caution.checked ? "标记为待注意" : "标记为已注意"}"
+                  aria-pressed="${caution.checked}"
+                  title="${caution.checked ? "标记为待注意" : "标记为已注意"}"
+                >${icon("check")}</button>
+                <div>
+                  <h3 class="mnemonic-title">${escapeHtml(caution.title)}</h3>
+                  <div class="mnemonic-meta">
+                    <span class="badge">${escapeHtml(caution.subject)}</span>
+                    ${caution.pinned ? `<span class="tag">置顶</span>` : ""}
+                    <span>${date}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="mnemonic-actions">
+                <button
+                  class="icon-btn ${caution.pinned ? "is-pinned" : ""}"
+                  type="button"
+                  data-caution-action="pin"
+                  data-id="${escapeHtml(caution.id)}"
+                  aria-label="${caution.pinned ? "取消置顶" : "置顶注意"}"
+                  title="${caution.pinned ? "取消置顶" : "置顶注意"}"
+                >${icon("pin")}</button>
+                <button
+                  class="icon-btn"
+                  type="button"
+                  data-caution-action="edit"
+                  data-id="${escapeHtml(caution.id)}"
+                  aria-label="编辑注意"
+                  title="编辑注意"
+                >${icon("edit")}</button>
+                <button
+                  class="icon-btn"
+                  type="button"
+                  data-caution-action="delete"
+                  data-id="${escapeHtml(caution.id)}"
+                  aria-label="删除注意"
+                  title="删除注意"
+                >${icon("trash")}</button>
+              </div>
+            </div>
+            <div class="mnemonic-content">${escapeHtml(caution.content)}</div>
+            ${
+              caution.tags.length
+                ? `<div class="mnemonic-tags">${caution.tags
+                    .map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`)
+                    .join("")}</div>`
+                : ""
+            }
+          </article>
+        `;
+      })
+      .join("");
+  }
+
   function renderAll() {
     const previousId = state.currentId;
     const current = getCurrentQuestion();
@@ -2582,6 +2875,7 @@ kbd {
     renderList();
     renderQuestion(current);
     renderMnemonics();
+    renderCautions();
     updateListMeta();
 
     els.searchInput.disabled = state.questions.length === 0;
@@ -2882,6 +3176,9 @@ kbd {
           <div class="note-actions">
             <button class="btn btn-small" type="button" data-action="make-mnemonic">
               ${icon("plus")}记成口诀
+            </button>
+            <button class="btn btn-small" type="button" data-action="make-caution">
+              ${icon("alert-circle")}记成注意
             </button>
             <span class="note-status" id="noteStatus">${noteStatus}</span>
           </div>
@@ -3299,18 +3596,290 @@ kbd {
     });
   }
 
+  function openCautionModal(caution = null, preset = {}) {
+    if (ui.modalOpen) return;
+    ui.modalOpen = true;
+    ui.lastFocus = document.activeElement;
+    ui.editingCautionId = caution ? caution.id : null;
+
+    const title = caution ? caution.title : preset.title || "";
+    const content = caution ? caution.content : preset.content || "";
+    const subject = caution ? caution.subject : preset.subject || "通用";
+    const tags = caution ? caution.tags.join(", ") : (preset.tags || []).join(", ");
+    const pinned = caution ? caution.pinned : false;
+    const checked = caution ? caution.checked : false;
+    const subjects = [
+      ...new Set([
+        ...state.questions.map((item) => item.subject),
+        ...state.cautions.map((item) => item.subject),
+      ]),
+    ].sort((a, b) => a.localeCompare(b, "zh-Hans-CN"));
+
+    els.modalRoot.innerHTML = `
+      <div class="modal-overlay" id="cautionModal">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cautionModalTitle">
+          <div class="modal-head">
+            <div>
+              <h2 id="cautionModalTitle">${caution ? "编辑注意" : "新建注意"}</h2>
+              <p class="modal-sub">写成一条能照着执行的提醒。</p>
+            </div>
+            <button class="icon-btn" type="button" id="closeCaution" aria-label="关闭注意窗口" title="关闭">
+              ${icon("close")}
+            </button>
+          </div>
+
+          <form id="cautionForm">
+            <div class="form-grid">
+              <label class="field">
+                <span>标题</span>
+                <input class="text-input" id="cautionTitleInput" maxlength="60" required
+                       value="${escapeHtml(title)}" placeholder="如：先看问的是正确还是错误">
+              </label>
+              <label class="field">
+                <span>学科 / 场景</span>
+                <input class="text-input" id="cautionSubjectInput" list="cautionSubjects"
+                       value="${escapeHtml(subject)}" placeholder="如：通用、内科学">
+              </label>
+            </div>
+            <datalist id="cautionSubjects">
+              ${subjects.map((item) => `<option value="${escapeHtml(item)}"></option>`).join("")}
+            </datalist>
+
+            <label class="field">
+              <span>注意内容</span>
+              <textarea class="note-area" id="cautionContentInput" required
+                        placeholder="例如：先扫最后一句；问“错误的是”时不要条件反射选正确项。">${escapeHtml(content)}</textarea>
+            </label>
+
+            <label class="field">
+              <span>标签</span>
+              <input class="text-input" id="cautionTagsInput"
+                     value="${escapeHtml(tags)}" placeholder="用逗号分隔，如：审题, X型题">
+            </label>
+
+            <div class="radio-row">
+              <label class="check-row">
+                <input type="checkbox" id="cautionPinnedInput" ${pinned ? "checked" : ""}>
+                置顶显示
+              </label>
+              <label class="check-row">
+                <input type="checkbox" id="cautionCheckedInput" ${checked ? "checked" : ""}>
+                已注意
+              </label>
+            </div>
+
+            <div class="modal-foot">
+              <span class="spacer"></span>
+              <button class="btn" type="button" id="cancelCaution">取消</button>
+              <button class="btn btn-primary" type="submit">${caution ? "保存修改" : "保存注意"}</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+    document.body.classList.add("modal-open");
+    document.getElementById("closeCaution").addEventListener("click", closeCautionModal);
+    document.getElementById("cancelCaution").addEventListener("click", closeCautionModal);
+    document.getElementById("cautionForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      saveCaution();
+    });
+    document.getElementById("cautionContentInput").addEventListener("keydown", (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+        event.preventDefault();
+        saveCaution();
+      }
+    });
+    document.getElementById("cautionModal").addEventListener("click", (event) => {
+      if (event.target.id === "cautionModal") closeCautionModal();
+    });
+    document.addEventListener("keydown", handleCautionModalKeydown);
+    window.requestAnimationFrame(() => {
+      const input = document.getElementById("cautionTitleInput");
+      if (input) input.focus();
+    });
+  }
+
+  function closeCautionModal() {
+    if (!ui.modalOpen) return;
+    ui.modalOpen = false;
+    ui.editingCautionId = null;
+    els.modalRoot.innerHTML = "";
+    document.body.classList.remove("modal-open");
+    document.removeEventListener("keydown", handleCautionModalKeydown);
+    if (ui.lastFocus && ui.lastFocus.isConnected) {
+      ui.lastFocus.focus({ preventScroll: true });
+    }
+    ui.lastFocus = null;
+  }
+
+  function handleCautionModalKeydown(event) {
+    if (!ui.modalOpen) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeCautionModal();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const modal = document.querySelector("#cautionModal .modal");
+    if (!modal) return;
+    const focusables = [
+      ...modal.querySelectorAll(
+        'button, [href], input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"])',
+      ),
+    ].filter((element) => !element.disabled && element.offsetParent !== null);
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  function saveCaution() {
+    const title = document.getElementById("cautionTitleInput")?.value.trim() || "";
+    const content = document.getElementById("cautionContentInput")?.value.trim() || "";
+    if (!title) {
+      toast("请填写注意标题");
+      document.getElementById("cautionTitleInput")?.focus();
+      return;
+    }
+    if (!content) {
+      toast("请填写注意内容");
+      document.getElementById("cautionContentInput")?.focus();
+      return;
+    }
+
+    const subject =
+      document.getElementById("cautionSubjectInput")?.value.trim() || "通用";
+    const tags = (document.getElementById("cautionTagsInput")?.value || "")
+      .split(/[,，、;；]/)
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+    const pinned = Boolean(document.getElementById("cautionPinnedInput")?.checked);
+    const checked = Boolean(document.getElementById("cautionCheckedInput")?.checked);
+    const now = Date.now();
+    const isEditing = Boolean(ui.editingCautionId);
+
+    if (isEditing) {
+      const target = state.cautions.find((item) => item.id === ui.editingCautionId);
+      if (target) {
+        Object.assign(target, {
+          title,
+          content,
+          subject,
+          tags: [...new Set(tags)].slice(0, 6),
+          pinned,
+          checked,
+          updatedAt: now,
+        });
+      }
+    } else {
+      state.cautions.push({
+        id: uid(),
+        title,
+        content,
+        subject,
+        tags: [...new Set(tags)].slice(0, 6),
+        pinned,
+        checked,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    saveState();
+    closeCautionModal();
+    renderAll();
+    toast(isEditing ? "注意已更新" : "注意已保存");
+  }
+
+  function deleteCaution(id) {
+    const target = state.cautions.find((item) => item.id === id);
+    if (!target) return;
+    if (!window.confirm(`确定删除注意“${target.title}”吗？`)) return;
+    state.cautions = state.cautions.filter((item) => item.id !== id);
+    saveState();
+    renderAll();
+    toast("已删除注意");
+  }
+
+  function toggleCautionPin(id) {
+    const target = state.cautions.find((item) => item.id === id);
+    if (!target) return;
+    target.pinned = !target.pinned;
+    target.updatedAt = Date.now();
+    saveState();
+    renderAll();
+    toast(target.pinned ? "已置顶" : "已取消置顶");
+  }
+
+  function toggleCautionChecked(id) {
+    const target = state.cautions.find((item) => item.id === id);
+    if (!target) return;
+    target.checked = !target.checked;
+    target.updatedAt = Date.now();
+    saveState();
+    renderAll();
+    toast(target.checked ? "已标记为注意" : "已标记为待注意");
+  }
+
+  function makeCautionFromQuestion() {
+    const question = getCurrentQuestion();
+    if (!question) return;
+    openCautionModal(null, {
+      title: truncate(question.stem, 28),
+      subject: question.subject,
+      tags: question.tags,
+    });
+  }
+
+  function loadDemoCautions() {
+    const existing = new Set(
+      state.cautions.map((item) => normalizeStem(`${item.title}|${item.content}`)),
+    );
+    let added = 0;
+    for (const demo of DEMO_CAUTIONS) {
+      const caution = normalizeCaution(demo);
+      if (!caution) continue;
+      const key = normalizeStem(`${caution.title}|${caution.content}`);
+      if (existing.has(key)) continue;
+      existing.add(key);
+      state.cautions.push({
+        ...caution,
+        id: uid(),
+        checked: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      added += 1;
+    }
+    if (!added) {
+      toast("示例注意已经存在");
+      return;
+    }
+    saveState();
+    renderAll();
+    toast(`已载入 ${added} 条示例注意`);
+  }
+
   function exportData() {
-    if (!state.questions.length && !state.mnemonics.length) {
+    if (!state.questions.length && !state.mnemonics.length && !state.cautions.length) {
       toast("还没有可备份的内容");
       return;
     }
 
     const payload = {
       app: "cuotiben",
-      version: 2,
+      version: 3,
       exportedAt: new Date().toISOString(),
       questions: state.questions,
       mnemonics: state.mnemonics,
+      cautions: state.cautions,
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: "application/json;charset=utf-8",
@@ -3347,6 +3916,7 @@ kbd {
 
     const questions = [];
     const mnemonics = [];
+    const cautions = [];
     const errors = [];
     data.questions.forEach((raw, index) => {
       try {
@@ -3360,14 +3930,20 @@ kbd {
       if (mnemonic) mnemonics.push(mnemonic);
       else errors.push(`口诀 ${index + 1}：缺少标题或内容`);
     });
+    (Array.isArray(data.cautions) ? data.cautions : []).forEach((raw, index) => {
+      const caution = normalizeCaution(raw);
+      if (caution) cautions.push(caution);
+      else errors.push(`注意 ${index + 1}：缺少标题或内容`);
+    });
 
-    if (!questions.length && !mnemonics.length) {
-      throw new Error("备份中没有可恢复的题目或口诀。");
+    if (!questions.length && !mnemonics.length && !cautions.length) {
+      throw new Error("备份中没有可恢复的题目、口诀或做题注意。");
     }
 
     return {
       questions,
       mnemonics,
+      cautions,
       exportedAt: typeof data.exportedAt === "string" ? data.exportedAt : null,
       errors,
     };
@@ -3385,7 +3961,7 @@ kbd {
           <div class="modal-head">
             <div>
               <h2 id="backupModalTitle">备份与恢复</h2>
-              <p class="modal-sub">备份包含题库、答题记录、笔记和口诀。</p>
+              <p class="modal-sub">备份包含题库、答题记录、笔记、口诀和做题注意。</p>
             </div>
             <button class="icon-btn" type="button" id="closeBackup" aria-label="关闭备份窗口" title="关闭">
               ${icon("close")}
@@ -3586,6 +4162,7 @@ kbd {
         `备份时间：${date}`,
         `题库：${backup.questions.length} 题`,
         `口诀：${backup.mnemonics.length} 条`,
+        `做题注意：${backup.cautions.length} 条`,
       ];
       if (backup.errors.length) {
         details.push(`另有 ${backup.errors.length} 条内容无法识别，将被跳过。`);
@@ -3607,6 +4184,7 @@ kbd {
     let addedQuestions = 0;
     let updatedQuestions = 0;
     let addedMnemonics = 0;
+    let addedCautions = 0;
 
     for (const incoming of backup.questions) {
       const key = normalizeStem(incoming.stem);
@@ -3656,7 +4234,20 @@ kbd {
       }
     }
 
-    return { addedQuestions, updatedQuestions, addedMnemonics };
+    const cautionKeys = new Set(
+      state.cautions.map((item) => normalizeStem(`${item.title}|${item.content}`)),
+    );
+    for (const incoming of backup.cautions) {
+      const key = normalizeStem(`${incoming.title}|${incoming.content}`);
+      if (!cautionKeys.has(key)) {
+        incoming.id = uid();
+        state.cautions.push(incoming);
+        cautionKeys.add(key);
+        addedCautions += 1;
+      }
+    }
+
+    return { addedQuestions, updatedQuestions, addedMnemonics, addedCautions };
   }
 
   function restoreBackup() {
@@ -3676,6 +4267,7 @@ kbd {
       }
       state.questions = backup.questions.map((question) => ({ ...question, id: uid() }));
       state.mnemonics = backup.mnemonics.map((mnemonic) => ({ ...mnemonic, id: uid() }));
+      state.cautions = backup.cautions.map((caution) => ({ ...caution, id: uid() }));
       state.currentId = null;
       state.filter = "all";
       state.subject = "all";
@@ -3686,7 +4278,7 @@ kbd {
       closeBackupModal();
       renderAll();
       toast(
-        `已覆盖恢复 ${state.questions.length} 道题、${state.mnemonics.length} 条口诀`,
+        `已覆盖恢复 ${state.questions.length} 道题、${state.mnemonics.length} 条口诀、${state.cautions.length} 条注意`,
       );
       return;
     }
@@ -3696,7 +4288,7 @@ kbd {
     closeBackupModal();
     renderAll();
     toast(
-      `已合并：新增 ${result.addedQuestions} 题、${result.addedMnemonics} 条口诀；补齐 ${result.updatedQuestions} 题`,
+      `已合并：新增 ${result.addedQuestions} 题、${result.addedMnemonics} 条口诀、${result.addedCautions} 条注意；补齐 ${result.updatedQuestions} 题`,
     );
   }
 
@@ -3759,6 +4351,7 @@ kbd {
       else if (action === "master") toggleMastered();
       else if (action === "delete") deleteQuestion();
       else if (action === "make-mnemonic") makeMnemonicFromQuestion();
+      else if (action === "make-caution") makeCautionFromQuestion();
       else if (action === "open-import") openImportModal();
       else if (action === "load-demo") loadDemo();
       else if (action === "clear-filters") clearFilters();
@@ -4710,7 +5303,10 @@ CSV 表头
 
     document.querySelectorAll(".view-tab").forEach((button) => {
       button.addEventListener("click", () => {
-        state.view = button.dataset.view === "mnemonics" ? "mnemonics" : "practice";
+        const view = button.dataset.view;
+        state.view = ["practice", "mnemonics", "cautions"].includes(view)
+          ? view
+          : "practice";
         saveState();
         renderAll();
       });
@@ -4756,6 +5352,59 @@ CSV 表头
         toggleMnemonicPin(id);
       } else if (action === "delete") {
         deleteMnemonic(id);
+      }
+    });
+
+    els.newCautionBtn.addEventListener("click", () => openCautionModal());
+
+    els.cautionSearch.addEventListener("input", () => {
+      ui.cautionQuery = els.cautionSearch.value;
+      els.clearCautionSearch.classList.toggle("is-visible", Boolean(ui.cautionQuery));
+      renderCautions();
+    });
+
+    els.clearCautionSearch.addEventListener("click", () => {
+      ui.cautionQuery = "";
+      els.cautionSearch.value = "";
+      els.clearCautionSearch.classList.remove("is-visible");
+      renderCautions();
+      els.cautionSearch.focus();
+    });
+
+    els.cautionSubjectFilter.addEventListener("change", () => {
+      ui.cautionSubject = els.cautionSubjectFilter.value;
+      renderCautions();
+    });
+
+    els.cautionStatusFilter.addEventListener("change", () => {
+      ui.cautionStatus = els.cautionStatusFilter.value;
+      renderCautions();
+    });
+
+    els.cautionGrid.addEventListener("click", (event) => {
+      const actionElement = event.target.closest("[data-caution-action]");
+      if (!actionElement) return;
+      const action = actionElement.dataset.cautionAction;
+      const id = actionElement.dataset.id;
+      if (action === "new") {
+        openCautionModal();
+      } else if (action === "load-demo") {
+        loadDemoCautions();
+      } else if (action === "clear-filter") {
+        ui.cautionQuery = "";
+        ui.cautionSubject = "all";
+        ui.cautionStatus = "all";
+        els.cautionSearch.value = "";
+        renderCautions();
+      } else if (action === "toggle") {
+        toggleCautionChecked(id);
+      } else if (action === "edit") {
+        const target = state.cautions.find((item) => item.id === id);
+        if (target) openCautionModal(target);
+      } else if (action === "pin") {
+        toggleCautionPin(id);
+      } else if (action === "delete") {
+        deleteCaution(id);
       }
     });
 
