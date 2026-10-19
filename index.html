@@ -1722,6 +1722,12 @@ button:not(:disabled) {
   font-size: 10.5px;
 }
 
+.app-version {
+  margin-left: 6px;
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
 .keys {
   display: inline-flex;
   align-items: center;
@@ -2221,7 +2227,7 @@ kbd {
   </section>
 
   <footer class="footer">
-    <div>数据仅保存在当前浏览器，不会上传到服务器。</div>
+    <div>数据仅保存在当前浏览器，不会上传到服务器。<span class="app-version">v2026.10.20</span></div>
     <div class="keys" aria-label="键盘快捷键">
       <kbd>A</kbd><span>–</span><kbd>E</kbd><span>选择</span>
       <span>·</span>
@@ -5045,6 +5051,13 @@ kbd {
           </div>
           <div class="ocr-tip">截图识别在本机浏览器内完成，图片不会上传到服务器。也可以直接按 Ctrl+V 粘贴截图。</div>
 
+          <div class="template-row">
+            <button class="btn btn-small" type="button" id="insertCaseTemplateBtn">
+              ${icon("plus")}插入病例题模板
+            </button>
+            <span>病例题 = 一份总病例描述 + 多个【第n问】</span>
+          </div>
+
           <div class="divider">或直接粘贴</div>
           <label class="sr-only" for="importText">粘贴题目内容</label>
           <textarea
@@ -5052,12 +5065,6 @@ kbd {
             id="importText"
             placeholder="粘贴题目文本、JSON 或 CSV…"
           ></textarea>
-          <div class="template-row">
-            <button class="btn btn-small" type="button" id="insertCaseTemplateBtn">
-              ${icon("plus")}插入病例题模板
-            </button>
-            <span>病例题 = 一份总病例描述 + 多个【第n问】</span>
-          </div>
 
           <details class="format">
             <summary>查看支持的格式</summary>
