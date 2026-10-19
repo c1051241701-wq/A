@@ -2227,7 +2227,7 @@ kbd {
   </section>
 
   <footer class="footer">
-    <div>数据仅保存在当前浏览器，不会上传到服务器。<span class="app-version">v2026.10.20</span></div>
+    <div>数据仅保存在当前浏览器，不会上传到服务器。<span class="app-version">v2026.10.20.2</span></div>
     <div class="keys" aria-label="键盘快捷键">
       <kbd>A</kbd><span>–</span><kbd>E</kbd><span>选择</span>
       <span>·</span>
@@ -3490,17 +3490,10 @@ kbd {
   }
 
   function addQuestions(items) {
-    const seen = new Set(state.questions.map((question) => normalizeStem(question.stem)));
     const added = [];
-    let duplicates = 0;
 
     for (const item of items) {
-      const key = normalizeStem(item.stem);
-      if (!key || seen.has(key)) {
-        duplicates += 1;
-        continue;
-      }
-      seen.add(key);
+      if (!item || !String(item.stem || "").trim()) continue;
       const question = {
         ...item,
         id: uid(),
@@ -3519,7 +3512,7 @@ kbd {
       renderAll();
     }
 
-    return { added: added.length, duplicates, firstId: added[0] ? added[0].id : null };
+    return { added: added.length, firstId: added[0] ? added[0].id : null };
   }
 
   function loadDemo() {
@@ -4155,7 +4148,7 @@ kbd {
                 <input type="radio" name="restoreMode" value="merge" checked>
                 <span>
                   <strong>合并恢复</strong>
-                  <span>保留现有内容，补充备份中的题目和口诀；重复题目用备份补齐笔记和作答记录。</span>
+                  <span>保留现有内容，并追加备份中的题目、口诀和注意；允许保留重复题目。</span>
                 </span>
               </label>
               <label class="radio-card">
@@ -4336,76 +4329,29 @@ kbd {
   }
 
   function mergeBackupData(backup) {
-    const questionsByStem = new Map(
-      state.questions.map((question) => [normalizeStem(question.stem), question]),
-    );
     let addedQuestions = 0;
-    let updatedQuestions = 0;
     let addedMnemonics = 0;
     let addedCautions = 0;
 
     for (const incoming of backup.questions) {
-      const key = normalizeStem(incoming.stem);
-      const existing = questionsByStem.get(key);
-      if (!existing) {
-        incoming.id = uid();
-        state.questions.push(incoming);
-        questionsByStem.set(key, incoming);
-        addedQuestions += 1;
-        continue;
-      }
-      let changed = false;
-      if (!existing.note && incoming.note) {
-        existing.note = incoming.note;
-        changed = true;
-      }
-      if (existing.attempts === 0 && incoming.attempts > 0) {
-        existing.attempts = incoming.attempts;
-        existing.correctCount = incoming.correctCount;
-        existing.lastResult = incoming.lastResult;
-        changed = true;
-      }
-      if (incoming.mastered && !existing.mastered) {
-        existing.mastered = true;
-        changed = true;
-      }
-      if (incoming.explanation && !existing.explanation) {
-        existing.explanation = incoming.explanation;
-        changed = true;
-      }
-      if (changed) {
-        existing.updatedAt = Date.now();
-        updatedQuestions += 1;
-      }
+      incoming.id = uid();
+      state.questions.push(incoming);
+      addedQuestions += 1;
     }
 
-    const mnemonicKeys = new Set(
-      state.mnemonics.map((item) => normalizeStem(`${item.title}|${item.content}`)),
-    );
     for (const incoming of backup.mnemonics) {
-      const key = normalizeStem(`${incoming.title}|${incoming.content}`);
-      if (!mnemonicKeys.has(key)) {
-        incoming.id = uid();
-        state.mnemonics.push(incoming);
-        mnemonicKeys.add(key);
-        addedMnemonics += 1;
-      }
+      incoming.id = uid();
+      state.mnemonics.push(incoming);
+      addedMnemonics += 1;
     }
 
-    const cautionKeys = new Set(
-      state.cautions.map((item) => normalizeStem(`${item.title}|${item.content}`)),
-    );
     for (const incoming of backup.cautions) {
-      const key = normalizeStem(`${incoming.title}|${incoming.content}`);
-      if (!cautionKeys.has(key)) {
-        incoming.id = uid();
-        state.cautions.push(incoming);
-        cautionKeys.add(key);
-        addedCautions += 1;
-      }
+      incoming.id = uid();
+      state.cautions.push(incoming);
+      addedCautions += 1;
     }
 
-    return { addedQuestions, updatedQuestions, addedMnemonics, addedCautions };
+    return { addedQuestions, addedMnemonics, addedCautions };
   }
 
   function restoreBackup() {
@@ -4446,7 +4392,7 @@ kbd {
     closeBackupModal();
     renderAll();
     toast(
-      `已合并：新增 ${result.addedQuestions} 题、${result.addedMnemonics} 条口诀、${result.addedCautions} 条注意；补齐 ${result.updatedQuestions} 题`,
+      `已合并：新增 ${result.addedQuestions} 题、${result.addedMnemonics} 条口诀、${result.addedCautions} 条注意`,
     );
   }
 
@@ -5576,12 +5522,11 @@ D. 选项四
 
     const addedResult = addQuestions(result.items);
     if (!addedResult.added) {
-      showImportResult("识别到的题目都已经在题库中，没有新增内容。", "error");
+      showImportResult("没有可导入的题目，请检查题干、选项和答案。", "error");
       return;
     }
 
     const parts = [`已导入 ${addedResult.added} 道题`];
-    if (addedResult.duplicates) parts.push(`跳过 ${addedResult.duplicates} 道重复题`);
     if (result.errors.length) parts.push(`${result.errors.length} 道未能识别`);
     closeImportModal();
     toast(parts.join("，"));
