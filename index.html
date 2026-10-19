@@ -1033,6 +1033,89 @@ button:not(:disabled) {
   color: var(--warn);
 }
 
+.badge-case {
+  border-color: #ddcfe9;
+  background: #f5eff9;
+  color: #6d4f86;
+}
+
+.case-panel {
+  margin: 0 0 18px;
+  overflow: hidden;
+  border: 1px solid #e4d9ec;
+  border-radius: 12px;
+  background: #fbf8fd;
+}
+
+.case-panel summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.case-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.case-toggle {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: #6d4f86;
+  transition: transform 150ms ease;
+}
+
+.case-toggle .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.case-panel[open] .case-toggle {
+  transform: rotate(90deg);
+}
+
+.case-title {
+  min-width: 0;
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.case-progress {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.case-text {
+  padding: 0 14px 13px;
+  color: #3d3c37;
+  font-size: 13.5px;
+  line-height: 1.82;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.case-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 0 14px 13px;
+}
+
+.case-actions .btn {
+  height: 30px;
+  padding: 0 9px;
+  font-size: 11px;
+}
+
 .q-stem {
   margin: 0;
   font-size: 18px;
@@ -1550,6 +1633,19 @@ button:not(:disabled) {
   border-color: var(--accent-border);
   background: var(--surface);
   outline: none;
+}
+
+.template-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.template-row span {
+  color: var(--muted-2);
+  font-size: 10.5px;
 }
 
 .format {
@@ -2425,6 +2521,11 @@ kbd {
       explanation: String(raw.explanation ?? "").trim(),
       subject: String(raw.subject ?? "未分类").trim() || "未分类",
       tags: [...new Set(tags)].slice(0, 6),
+      caseId: typeof raw.caseId === "string" && raw.caseId ? raw.caseId : null,
+      caseTitle: String(raw.caseTitle ?? "").trim(),
+      caseText: String(raw.caseText ?? raw.case ?? "").trim(),
+      caseOrder: Number(raw.caseOrder) || 0,
+      caseTotal: Number(raw.caseTotal) || 0,
       note: String(raw.note ?? ""),
       attempts: Number(raw.attempts) || 0,
       correctCount: Number(raw.correctCount) || 0,
@@ -2979,6 +3080,11 @@ kbd {
             <span class="q-item-body">
               <span class="q-item-stem">${escapeHtml(truncate(question.stem, 82))}</span>
               <span class="q-item-meta">
+                ${
+                  question.caseId
+                    ? `<span class="tag">病例</span><span>${escapeHtml(truncate(question.caseTitle || "病例题", 16))}</span><span>·</span>`
+                    : ""
+                }
                 <span>${escapeHtml(question.subject)}</span>
                 <span>·</span>
                 <span>${status.label}</span>
@@ -3124,6 +3230,34 @@ kbd {
       : `<button class="btn btn-primary" type="button" data-action="submit" ${submitDisabled ? "disabled" : ""}>提交答案</button>
          <span class="hint">${question.answer ? "答错会自动记录到待复习" : "请先补充标准答案"}</span>`;
 
+    const caseQuestions = question.caseId
+      ? state.questions
+          .filter((item) => item.caseId === question.caseId)
+          .sort((a, b) => a.caseOrder - b.caseOrder)
+      : [];
+    const caseIndex = Math.max(
+      0,
+      caseQuestions.findIndex((item) => item.id === question.id),
+    );
+    const caseTotal = caseQuestions.length || question.caseTotal || 0;
+    const caseHTML = question.caseId
+      ? `
+        <details class="case-panel" open>
+          <summary>
+            <span class="case-toggle">${icon("chevron-right")}</span>
+            <span class="badge badge-case">病例题</span>
+            <span class="case-title">${escapeHtml(question.caseTitle || "病例题")}</span>
+            <span class="case-progress">本病例第 ${caseIndex + 1}/${caseTotal} 问</span>
+          </summary>
+          <div class="case-text">${escapeHtml(question.caseText || "暂无病例描述")}</div>
+          <div class="case-actions">
+            <button class="btn" type="button" data-action="case-prev" ${caseIndex <= 0 ? "disabled" : ""}>上一问</button>
+            <button class="btn" type="button" data-action="case-next" ${caseIndex >= caseTotal - 1 ? "disabled" : ""}>下一问</button>
+          </div>
+        </details>
+      `
+      : "";
+
     els.main.innerHTML = `
       <div class="q-head">
         <div class="q-index">第 <strong>${index + 1}</strong> 题 <span>/ 共 ${list.length} 题</span></div>
@@ -3144,6 +3278,7 @@ kbd {
         </div>
       </div>
 
+      ${caseHTML}
       <h2 class="q-stem">${escapeHtml(question.stem)}</h2>
       ${
         question.tags.length
@@ -3229,6 +3364,23 @@ kbd {
           : list.length - 1
         : (currentIndex + delta + list.length) % list.length;
     selectQuestion(list[nextIndex].id);
+  }
+
+  function navigateCase(delta) {
+    const question = getCurrentQuestion();
+    if (!question || !question.caseId) return;
+    const caseQuestions = state.questions
+      .filter((item) => item.caseId === question.caseId)
+      .sort((a, b) => a.caseOrder - b.caseOrder);
+    const index = caseQuestions.findIndex((item) => item.id === question.id);
+    const target = caseQuestions[index + delta];
+    if (!target) return;
+
+    state.filter = "all";
+    state.subject = "all";
+    state.query = "";
+    els.searchInput.value = "";
+    selectQuestion(target.id);
   }
 
   function toggleOption(key) {
@@ -4348,6 +4500,8 @@ kbd {
       else if (action === "retry") retryQuestion();
       else if (action === "prev") navigate(-1);
       else if (action === "next") navigate(1);
+      else if (action === "case-prev") navigateCase(-1);
+      else if (action === "case-next") navigateCase(1);
       else if (action === "master") toggleMastered();
       else if (action === "delete") deleteQuestion();
       else if (action === "make-mnemonic") makeMnemonicFromQuestion();
@@ -4638,6 +4792,52 @@ kbd {
     return blocks.map(parseTextBlock);
   }
 
+  function parseCaseTextToRaws(text) {
+    const normalized = String(text ?? "").replace(/\r/g, "").trim();
+    const headerMatch = normalized.match(
+      /^【病例题】\s*(.*?)\n([\s\S]*?)(?=【第\s*1\s*问】)/,
+    );
+    if (!headerMatch) {
+      throw new Error("病例题格式不正确：需要【病例题】标题和【第1问】");
+    }
+
+    const caseTitle = headerMatch[1].trim() || "病例题";
+    const header = headerMatch[2];
+    const subject =
+      header.match(/^(?:学科|科目)\s*[：:]\s*(.+)$/m)?.[1]?.trim() || "未分类";
+    const tags = header.match(/^标签\s*[：:]\s*(.+)$/m)?.[1]?.trim() || "";
+    const caseText = header
+      .replace(/^(?:学科|科目|标签)\s*[：:].*$/gm, "")
+      .replace(/^病例(?:描述)?\s*[：:]?\s*/m, "")
+      .trim();
+    if (!caseText) throw new Error("病例题缺少病例描述");
+
+    const chunks = normalized.split(/【第\s*(\d+)\s*问】/);
+    const subs = [];
+    for (let index = 1; index < chunks.length; index += 2) {
+      const body = chunks[index + 1]?.trim();
+      if (!body) continue;
+      const raw = parseTextBlock(body);
+      if (!raw.stem || !raw.options.length) {
+        throw new Error(`第 ${chunks[index]} 问缺少题干或选项`);
+      }
+      subs.push(raw);
+    }
+    if (!subs.length) throw new Error("病例题没有可用的子问题");
+
+    const caseId = uid();
+    return subs.map((sub, index) => ({
+      ...sub,
+      caseId,
+      caseTitle,
+      caseText,
+      caseOrder: index,
+      caseTotal: subs.length,
+      subject: sub.subject || subject,
+      tags: sub.tags || tags,
+    }));
+  }
+
   function normalizeImportedQuestion(raw) {
     if (!raw || typeof raw !== "object") {
       throw new Error("不是有效的题目对象");
@@ -4708,6 +4908,11 @@ kbd {
       subject:
         String(raw.subject ?? raw["学科"] ?? raw["科目"] ?? "未分类").trim() || "未分类",
       tags: [...new Set(tags)].slice(0, 6),
+      caseId: typeof raw.caseId === "string" && raw.caseId ? raw.caseId : null,
+      caseTitle: String(raw.caseTitle ?? "").trim(),
+      caseText: String(raw.caseText ?? raw.case ?? "").trim(),
+      caseOrder: Number(raw.caseOrder) || 0,
+      caseTotal: Number(raw.caseTotal) || 0,
       note: String(raw.note ?? ""),
       attempts: Number(raw.attempts) || 0,
       correctCount: Number(raw.correctCount) || 0,
@@ -4717,6 +4922,36 @@ kbd {
       createdAt: Number(raw.createdAt) || Date.now(),
       updatedAt: Date.now(),
     };
+  }
+
+  function expandCaseRaw(raw) {
+    if (!raw || typeof raw !== "object") return [raw];
+    const isCase =
+      String(raw.type || "").toLowerCase() === "case" ||
+      (Array.isArray(raw.questions) && Boolean(raw.case || raw.caseText || raw.description));
+    if (!isCase) return [raw];
+
+    const subs = raw.questions;
+    if (!Array.isArray(subs) || !subs.length) {
+      throw new Error("病例题需要至少一个子问题");
+    }
+    const caseText = String(raw.case ?? raw.caseText ?? raw.description ?? "").trim();
+    if (!caseText) throw new Error("病例题缺少病例描述");
+    const caseTitle = String(raw.title ?? raw.caseTitle ?? "病例题").trim() || "病例题";
+    const caseId = uid();
+    const subject = raw.subject ?? raw["学科"] ?? "未分类";
+    const tags = raw.tags ?? raw["标签"] ?? [];
+
+    return subs.map((sub, index) => ({
+      ...sub,
+      caseId,
+      caseTitle,
+      caseText,
+      caseOrder: index,
+      caseTotal: subs.length,
+      subject: sub.subject ?? subject,
+      tags: sub.tags ?? tags,
+    }));
   }
 
   function parseImport(text) {
@@ -4729,6 +4964,14 @@ kbd {
         const data = JSON.parse(trimmed);
         if (Array.isArray(data)) {
           raws = data;
+        } else if (
+          data &&
+          (String(data.type || "").toLowerCase() === "case" ||
+            data.case ||
+            data.caseText ||
+            data.description)
+        ) {
+          raws = [data];
         } else if (data && Array.isArray(data.questions)) {
           raws = data.questions;
         } else if (data && typeof data === "object") {
@@ -4742,15 +4985,28 @@ kbd {
           firstLine.includes(",") &&
           (/(题目|题干|question|stem|答案|answer)/i.test(firstLine) ||
             firstLine.split(",").length >= 6);
-        raws = looksLikeCSV ? parseCSVToRaws(trimmed) : parseTextToRaws(trimmed);
+        raws = looksLikeCSV
+          ? parseCSVToRaws(trimmed)
+          : trimmed.includes("【病例题】")
+            ? parseCaseTextToRaws(trimmed)
+            : parseTextToRaws(trimmed);
       }
     } catch (error) {
       return { items: [], errors: [error.message || "内容解析失败"] };
     }
 
-    const items = [];
+    const expanded = [];
     const errors = [];
     raws.forEach((raw, index) => {
+      try {
+        expanded.push(...expandCaseRaw(raw));
+      } catch (error) {
+        errors.push(`第 ${index + 1} 条：${error.message}`);
+      }
+    });
+
+    const items = [];
+    expanded.forEach((raw, index) => {
       try {
         items.push(normalizeImportedQuestion(raw));
       } catch (error) {
@@ -4796,6 +5052,12 @@ kbd {
             id="importText"
             placeholder="粘贴题目文本、JSON 或 CSV…"
           ></textarea>
+          <div class="template-row">
+            <button class="btn btn-small" type="button" id="insertCaseTemplateBtn">
+              ${icon("plus")}插入病例题模板
+            </button>
+            <span>病例题 = 一份总病例描述 + 多个【第n问】</span>
+          </div>
 
           <details class="format">
             <summary>查看支持的格式</summary>
@@ -4814,7 +5076,25 @@ JSON 示例
 [{"stem":"题干","options":["A选项","B选项","C选项","D选项"],"answer":"C","explanation":"解析","subject":"内科学","tags":["心衰"]}]
 
 CSV 表头
-题目,选项A,选项B,选项C,选项D,答案,解析,学科,标签</pre>
+题目,选项A,选项B,选项C,选项D,答案,解析,学科,标签
+
+病例题文本格式
+【病例题】病例标题
+病例：
+总病例描述
+学科：内科学
+标签：病例题
+
+【第1问】子问题
+A. 选项
+B. 选项
+C. 选项
+D. 选项
+答案：C
+解析：解析
+
+【第2问】子问题
+...</pre>
           </details>
 
           <div class="import-result" id="importResult" hidden></div>
@@ -4842,6 +5122,35 @@ CSV 表头
     result.hidden = false;
     result.className = `import-result ${type}`;
     result.textContent = message;
+  }
+
+  function insertCaseTemplate() {
+    const area = document.getElementById("importText");
+    if (!area) return;
+    const template = `【病例题】在这里写病例标题
+病例：
+在这里写总的病例描述，可以多行。
+学科：内科学
+标签：病例题
+
+【第1问】在这里写第一问
+A. 选项一
+B. 选项二
+C. 选项三
+D. 选项四
+答案：C
+解析：在这里写解析
+
+【第2问】在这里写第二问
+A. 选项一
+B. 选项二
+C. 选项三
+D. 选项四
+答案：B
+解析：在这里写解析`;
+    area.value = area.value.trim() ? `${area.value.trim()}\n\n${template}` : template;
+    area.focus();
+    showImportResult("", "ok", true);
   }
 
   function openImportModal() {
@@ -4911,6 +5220,7 @@ CSV 表头
     });
 
     importText.addEventListener("input", () => showImportResult("", "ok", true));
+    document.getElementById("insertCaseTemplateBtn").addEventListener("click", insertCaseTemplate);
     document.getElementById("confirmImportBtn").addEventListener("click", doImport);
     document.getElementById("clearDataBtn").addEventListener("click", clearAllData);
 
