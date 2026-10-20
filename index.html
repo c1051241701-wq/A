@@ -2128,6 +2128,22 @@ kbd {
 }
 
     </style>
+<link rel="stylesheet" href="hero/butterfly-hero.css">
+<style>
+  /* 封面横幅：宽度跟 .app 对齐，高度收成一条，不抢主体区域的视线 */
+  .hero-slot { margin: 0 0 22px; }
+  .hero-slot .butterfly-hero {
+    --bh-ratio: auto;
+    --bh-min-height: 0;
+    --bh-radius: 16px;
+    height: 260px;
+    border-color: var(--border);
+  }
+  @media (max-width: 640px) {
+    .hero-slot { margin-bottom: 16px; }
+    .hero-slot .butterfly-hero { height: 176px; --bh-radius: 12px; }
+  }
+</style>
   </head>
   <body>
 <svg class="icon-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -2232,6 +2248,21 @@ kbd {
       </button>
     </div>
   </header>
+  <!-- 封面横幅：背景短片 + 粒子拼字。不想要就整段删掉，不影响其它功能 -->
+  <section class="hero-slot" aria-label="封面">
+    <div class="butterfly-hero butterfly-hero--on-dark" data-butterfly-hero
+         data-text="Shunyi Cheng" data-ink="#f2f1ec" data-accent="#fb923c"
+         data-loop="1"
+         data-font='"Inter","PingFang SC","Microsoft YaHei",sans-serif'>
+      <video class="butterfly-hero__video" data-bh-video muted playsinline webkit-playsinline
+             preload="auto" aria-hidden="true"
+             controlsList="nodownload nofullscreen noremoteplayback"
+             disablePictureInPicture disableRemotePlayback>
+        <source src="hero/background.mp4" type="video/mp4">
+      </video>
+      <canvas class="butterfly-hero__canvas" data-bh-canvas aria-hidden="true"></canvas>
+    </div>
+  </section>
 
   <div class="view-bar">
     <nav class="view-tabs" role="tablist" aria-label="页面切换">
@@ -6409,5 +6440,6 @@ D. 选项四
 })();
 
     </script>
+      <script src="hero/butterfly-hero.js"></script>
   </body>
 </html>
