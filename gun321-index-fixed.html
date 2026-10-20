@@ -1,0 +1,6445 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <meta name="description" content="本地错题管理、答题与笔记工具">
+    <title>错题本</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%232F6F5E'/%3E%3Cpath d='M18 17h28v30H18z' fill='none' stroke='white' stroke-width='3'/%3E%3Cpath d='m24 33 6 6 12-14' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <style>
+:root {
+  --bg: #f6f5f1;
+  --surface: #ffffff;
+  --surface-2: #faf9f5;
+  --text: #1d1d1b;
+  --muted: #75736b;
+  --muted-2: #9b988f;
+  --border: #e5e2da;
+  --border-strong: #cfcbc1;
+  --accent: #2f6f5e;
+  --accent-hover: #285f51;
+  --accent-soft: #eaf2ee;
+  --accent-border: #c9ddd4;
+  --danger: #b24a3f;
+  --danger-soft: #fbedeb;
+  --danger-border: #e4c2bc;
+  --warn: #8a6420;
+  --warn-soft: #fbf3e4;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 1px 2px rgba(29, 29, 27, 0.03), 0 18px 48px rgba(29, 29, 27, 0.045);
+  --font-ui: "Inter", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: -220px;
+  left: 50%;
+  width: 760px;
+  height: 460px;
+  transform: translateX(-50%);
+  background: radial-gradient(closest-side, rgba(47, 111, 94, 0.07), transparent 72%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+body.modal-open {
+  overflow: hidden;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.icon-sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.app {
+  position: relative;
+  z-index: 1;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 28px 28px 36px;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.brand-mark {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(47, 111, 94, 0.18);
+}
+
+.brand-mark .icon {
+  width: 23px;
+  height: 23px;
+  stroke-width: 1.7;
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.brand p {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease,
+    transform 160ms ease;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: #fcfbf8;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn-primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
+}
+
+.btn-ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  border-color: transparent;
+  background: rgba(29, 29, 27, 0.045);
+  color: var(--text);
+}
+
+.btn-danger {
+  color: var(--danger);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.btn-small {
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.btn.is-mastered {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.icon-btn:hover:not(:disabled) {
+  border-color: var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.view-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.view-tabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.view-tab {
+  height: 32px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.view-tab:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.view-tab.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.view-hint {
+  color: var(--muted-2);
+  font-size: 10.5px;
+}
+
+.view-panel[hidden] {
+  display: none;
+}
+
+.mnemonic-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 2px 0 16px;
+}
+
+.mnemonic-toolbar h2 {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.mnemonic-toolbar p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.mnemonic-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 190px;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.caution-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 170px 132px;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.mnemonic-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.mnemonic-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 180px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.mnemonic-card.pinned {
+  border-color: var(--accent-border);
+}
+
+.caution-card.is-checked {
+  background: var(--surface-2);
+}
+
+.caution-card.is-checked .mnemonic-title,
+.caution-card.is-checked .mnemonic-content {
+  color: var(--muted);
+}
+
+.caution-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.caution-check {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: var(--surface);
+  color: transparent;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.caution-check .icon {
+  width: 15px;
+  height: 15px;
+}
+
+.caution-check:hover {
+  border-color: var(--accent);
+}
+
+.caution-check.checked {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.mnemonic-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mnemonic-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.mnemonic-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+  color: var(--muted-2);
+  font-size: 10.5px;
+}
+
+.mnemonic-actions {
+  display: flex;
+  gap: 1px;
+  flex: none;
+}
+
+.mnemonic-actions .icon-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+}
+
+.mnemonic-actions .icon-btn .icon {
+  width: 15px;
+  height: 15px;
+}
+
+.mnemonic-actions .icon-btn.is-pinned {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.mnemonic-content {
+  color: #3d3c37;
+  font-size: 13.5px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.mnemonic-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: auto;
+}
+
+.mnemonic-empty {
+  grid-column: 1 / -1;
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 20px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 14px;
+  background: var(--surface);
+  text-align: center;
+}
+
+.mnemonic-empty .empty-art {
+  width: 84px;
+  height: 84px;
+  margin-bottom: 12px;
+}
+
+.mnemonic-empty h3 {
+  margin: 0 0 6px;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.mnemonic-empty p {
+  max-width: 320px;
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
+.field {
+  display: block;
+  margin-top: 12px;
+}
+
+.field > span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 190px;
+  gap: 10px;
+}
+
+.text-input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.text-input:focus {
+  border-color: var(--accent-border);
+  background: var(--surface);
+  outline: none;
+}
+
+.check-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.backup-section {
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+}
+
+.backup-section:first-of-type {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.backup-section h3 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.backup-section p {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.65;
+}
+
+.radio-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 10px 0;
+}
+
+.radio-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex: 1;
+  min-width: 220px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.radio-card input {
+  margin-top: 2px;
+  accent-color: var(--accent);
+}
+
+.radio-card strong {
+  display: block;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.radio-card span {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1.55;
+}
+
+.backup-summary {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent-hover);
+  font-size: 11.5px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.auto-backup-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.auto-backup-progress {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1.6;
+}
+
+.auto-backup-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.auto-backup-meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.auto-backup-time {
+  color: var(--text);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.auto-backup-counts {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+
+.auto-backup-row .btn {
+  height: 28px;
+  padding: 0 8px;
+  font-size: 10.5px;
+}
+
+.auto-backup-empty {
+  padding: 6px 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.stat {
+  min-width: 0;
+  padding: 17px 20px 16px;
+  border-right: 1px solid var(--border);
+}
+
+.stat:last-child {
+  border-right: 0;
+}
+
+.stat-label {
+  margin-bottom: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.stat-value {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  font-size: 27px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-value small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.stat-note {
+  margin-top: 2px;
+  color: var(--muted-2);
+  font-size: 10.5px;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 336px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.sidebar {
+  position: sticky;
+  top: 20px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.search-wrap {
+  position: relative;
+}
+
+.search-wrap > .icon {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  width: 16px;
+  height: 16px;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.search {
+  width: 100%;
+  height: 40px;
+  padding: 0 34px 0 36px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.search::placeholder {
+  color: var(--muted-2);
+}
+
+.search::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.search:focus {
+  border-color: var(--accent-border);
+  background: var(--surface);
+  outline: none;
+}
+
+.search:disabled {
+  background: var(--surface-2);
+  color: var(--muted-2);
+}
+
+.search-clear {
+  position: absolute;
+  top: 50%;
+  right: 5px;
+  width: 28px;
+  height: 28px;
+  display: none;
+  place-items: center;
+  padding: 0;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.search-clear:hover {
+  background: rgba(29, 29, 27, 0.06);
+  color: var(--text);
+}
+
+.search-clear.is-visible {
+  display: grid;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 10px 0 9px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.chip:hover {
+  background: rgba(29, 29, 27, 0.045);
+  color: var(--text);
+}
+
+.chip.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.chip .count {
+  color: var(--muted-2);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chip.active .count {
+  color: var(--accent);
+  opacity: 0.72;
+}
+
+.subject-select {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12.5px;
+}
+
+.subject-select:disabled {
+  color: var(--muted-2);
+}
+
+.list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 13px 3px 6px;
+  color: var(--muted);
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+}
+
+.list-head span:last-child {
+  font-variant-numeric: tabular-nums;
+}
+
+.question-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: calc(100vh - 380px);
+  min-height: 96px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.question-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.question-list::-webkit-scrollbar-thumb {
+  border-radius: 99px;
+  background: #d9d6ce;
+}
+
+.question-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.q-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 9px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  text-align: left;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.q-item:hover {
+  background: var(--surface-2);
+}
+
+.q-item.active {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: #c3c0b7;
+}
+
+.status-dot.wrong {
+  background: var(--danger);
+}
+
+.status-dot.mastered {
+  background: var(--accent);
+}
+
+.status-dot.correct {
+  background: #78978d;
+}
+
+.q-item-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.q-item-stem {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--text);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.q-item.active .q-item-stem {
+  color: #214f43;
+}
+
+.q-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
+.q-item-index {
+  flex: none;
+  margin-top: 2px;
+  color: var(--muted-2);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.list-empty {
+  padding: 28px 12px;
+  color: var(--muted-2);
+  font-size: 12px;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.main-panel {
+  min-height: 540px;
+  padding: 28px 30px 26px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.q-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 17px;
+}
+
+.q-index {
+  color: var(--muted);
+  font-size: 11.5px;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+.q-index strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.q-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.badge-multi {
+  border-color: #eadfc8;
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.badge-case {
+  border-color: #ddcfe9;
+  background: #f5eff9;
+  color: #6d4f86;
+}
+
+.case-panel {
+  margin: 0 0 18px;
+  overflow: hidden;
+  border: 1px solid #e4d9ec;
+  border-radius: 12px;
+  background: #fbf8fd;
+}
+
+.case-panel summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.case-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.case-toggle {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: #6d4f86;
+  transition: transform 150ms ease;
+}
+
+.case-toggle .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.case-panel[open] .case-toggle {
+  transform: rotate(90deg);
+}
+
+.case-title {
+  min-width: 0;
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.case-progress {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.case-text {
+  padding: 0 14px 13px;
+  color: #3d3c37;
+  font-size: 13.5px;
+  line-height: 1.82;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.case-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 0 14px 13px;
+}
+
+.case-actions .btn {
+  height: 30px;
+  padding: 0 9px;
+  font-size: 11px;
+}
+
+.edit-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.edit-option-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-option-row .text-input {
+  flex: 1;
+  height: 36px;
+}
+
+.edit-option-row .option-key {
+  width: 26px;
+  height: 26px;
+}
+
+.edit-option-row .icon-btn {
+  width: 30px;
+  height: 30px;
+}
+
+.correct-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.correct-toggle input {
+  accent-color: var(--accent);
+}
+
+.case-edit-fields {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid #e4d9ec;
+  border-radius: 10px;
+  background: #fbf8fd;
+}
+
+.case-edit-fields .field:first-child {
+  margin-top: 0;
+}
+
+.editor-hint {
+  margin: 5px 0 0;
+  color: var(--muted-2);
+  font-size: 10.5px;
+  line-height: 1.6;
+}
+
+.q-stem {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.78;
+  letter-spacing: -0.012em;
+  overflow-wrap: anywhere;
+}
+
+.q-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.tag {
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
+.options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 20px 0 20px;
+}
+
+.option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface);
+  text-align: left;
+  transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.option:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+
+.option:disabled {
+  cursor: default;
+}
+
+.option-key {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.option-text {
+  flex: 1;
+  padding-top: 1px;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.62;
+  overflow-wrap: anywhere;
+}
+
+.option-mark {
+  width: 17px;
+  height: 17px;
+  flex: none;
+  margin-top: 4px;
+  color: transparent;
+}
+
+.option.selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1px rgba(47, 111, 94, 0.08);
+}
+
+.option.selected .option-key {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.option.correct {
+  border-color: #9bc0b1;
+  background: #eef6f1;
+}
+
+.option.correct .option-key {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.option.correct .option-mark {
+  color: var(--accent);
+}
+
+.option.wrong {
+  border-color: var(--danger-border);
+  background: var(--danger-soft);
+}
+
+.option.wrong .option-key {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: #fff;
+}
+
+.option.wrong .option-mark {
+  color: var(--danger);
+}
+
+.q-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.q-actions .spacer {
+  flex: 1;
+  min-width: 8px;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.nav-arrows {
+  display: flex;
+  gap: 2px;
+}
+
+.feedback,
+.feedback-hint {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.feedback-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.feedback-head .icon {
+  width: 19px;
+  height: 19px;
+}
+
+.feedback.ok .feedback-head {
+  color: var(--accent);
+}
+
+.feedback.bad .feedback-head {
+  color: var(--danger);
+}
+
+.feedback-answer {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.feedback-answer strong {
+  color: var(--text);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.feedback-exp {
+  margin-top: 12px;
+  color: #3d3c37;
+  font-size: 13.5px;
+  line-height: 1.82;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.feedback-hint {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.note-block {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.note-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.note-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.note-label .icon {
+  width: 15px;
+  height: 15px;
+  color: var(--muted);
+}
+
+.note-status {
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
+.note-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.note-area {
+  width: 100%;
+  min-height: 112px;
+  padding: 12px 13px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.75;
+  resize: vertical;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.note-area::placeholder {
+  color: var(--muted-2);
+}
+
+.note-area:focus {
+  border-color: var(--accent-border);
+  background: var(--surface);
+  outline: none;
+}
+
+.note-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 6px;
+  color: var(--muted-2);
+  font-size: 10px;
+}
+
+.empty {
+  min-height: 540px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 38px 20px;
+  text-align: center;
+}
+
+.empty-art {
+  width: 112px;
+  height: 112px;
+  margin-bottom: 18px;
+  color: var(--accent);
+  opacity: 0.88;
+}
+
+.empty h2 {
+  margin: 0 0 7px;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.empty p {
+  max-width: 330px;
+  margin: 0 0 20px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+.empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.empty.small {
+  min-height: 420px;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(29, 29, 27, 0.34);
+  backdrop-filter: blur(2px);
+  animation: overlayIn 160ms ease both;
+}
+
+.modal {
+  width: min(680px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 28px 90px rgba(20, 20, 18, 0.22);
+  animation: modalIn 180ms ease both;
+}
+
+.modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.modal h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.modal-sub {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 128px;
+  padding: 20px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: 12px;
+  background: var(--surface-2);
+  text-align: center;
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.dropzone:hover,
+.dropzone.dragover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.dropzone .icon {
+  width: 26px;
+  height: 26px;
+  margin-bottom: 7px;
+  color: var(--muted);
+}
+
+.dropzone strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dropzone span {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.file-name {
+  margin-top: 7px;
+  color: var(--accent);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.image-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.image-preview[hidden] {
+  display: none;
+}
+
+.image-preview img {
+  width: 118px;
+  height: 82px;
+  flex: none;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: #fff;
+  object-fit: contain;
+}
+
+.ocr-status {
+  min-width: 0;
+  flex: 1;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+
+.ocr-status strong {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ocr-progress {
+  height: 4px;
+  margin-top: 7px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: #e8e5dd;
+}
+
+.ocr-progress > span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 180ms ease;
+}
+
+.ocr-tip {
+  margin-top: 7px;
+  color: var(--muted-2);
+  font-size: 10.5px;
+  line-height: 1.6;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 15px 0;
+  color: var(--muted-2);
+  font-size: 10.5px;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.import-area {
+  width: 100%;
+  min-height: 158px;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.65;
+  resize: vertical;
+}
+
+.import-area:focus {
+  border-color: var(--accent-border);
+  background: var(--surface);
+  outline: none;
+}
+
+.template-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.template-row span {
+  color: var(--muted-2);
+  font-size: 10.5px;
+}
+
+.format {
+  margin-top: 9px;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.format summary {
+  width: fit-content;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.format summary:hover {
+  color: var(--text);
+}
+
+.format pre {
+  max-height: 220px;
+  margin: 8px 0 0;
+  padding: 11px 12px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-2);
+  color: #4a4943;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.import-result {
+  margin-top: 12px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.import-result.ok {
+  background: var(--accent-soft);
+  color: var(--accent-hover);
+}
+
+.import-result.error {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.modal-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 17px;
+}
+
+.modal-foot .spacer {
+  flex: 1;
+  min-width: 6px;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  color: var(--muted-2);
+  font-size: 10.5px;
+}
+
+.app-version {
+  margin-left: 6px;
+  color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+kbd {
+  min-width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  border: 1px solid var(--border);
+  border-bottom-color: var(--border-strong);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--muted);
+  font-family: var(--font-ui);
+  font-size: 9.5px;
+  line-height: 1;
+}
+
+.toast-root {
+  position: fixed;
+  bottom: 22px;
+  left: 50%;
+  z-index: 140;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.toast {
+  max-width: min(88vw, 420px);
+  padding: 9px 13px;
+  border-radius: 9px;
+  background: #232320;
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.55;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(20, 20, 18, 0.2);
+  animation: toastIn 180ms ease both;
+}
+
+.toast.error {
+  background: #8f3a31;
+}
+
+.toast.info {
+  background: #2f4f46;
+}
+
+@keyframes overlayIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.992);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 980px) {
+  .app {
+    padding: 22px 20px 30px;
+  }
+
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+    order: 2;
+  }
+
+  .main-panel {
+    order: 1;
+  }
+
+  .question-list {
+    max-height: 300px;
+  }
+
+  .mnemonic-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stat:nth-child(2) {
+    border-right: 0;
+  }
+
+  .stat:nth-child(1),
+  .stat:nth-child(2) {
+    border-bottom: 1px solid var(--border);
+  }
+}
+
+@media (max-width: 640px) {
+  .app {
+    padding: 16px 14px 26px;
+  }
+
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .top-actions {
+    width: 100%;
+  }
+
+  .top-actions .btn {
+    flex: 1;
+  }
+
+  .view-bar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .view-hint {
+    display: none;
+  }
+
+  .mnemonic-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .mnemonic-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .caution-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .mnemonic-card {
+    min-height: 0;
+    padding: 15px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .radio-card {
+    min-width: 100%;
+  }
+
+  .brand-mark {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+  }
+
+  .brand h1 {
+    font-size: 18px;
+  }
+
+  .stats {
+    margin-bottom: 14px;
+  }
+
+  .stat {
+    padding: 14px 15px;
+  }
+
+  .stat-value {
+    font-size: 23px;
+  }
+
+  .main-panel {
+    min-height: 480px;
+    padding: 19px 16px 20px;
+    border-radius: 14px;
+  }
+
+  .q-head {
+    align-items: flex-start;
+  }
+
+  .q-tools {
+    gap: 4px;
+  }
+
+  .q-stem {
+    font-size: 16px;
+    line-height: 1.75;
+  }
+
+  .option {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .option-text {
+    font-size: 13.5px;
+  }
+
+  .q-actions {
+    gap: 6px;
+  }
+
+  .q-actions .hint {
+    display: none;
+  }
+
+  .feedback-exp {
+    font-size: 13px;
+  }
+
+  .empty {
+    min-height: 480px;
+    padding: 30px 16px;
+  }
+
+  .empty-art {
+    width: 96px;
+    height: 96px;
+  }
+
+  .modal-overlay {
+    padding: 10px;
+  }
+
+  .modal {
+    max-height: 94vh;
+    padding: 18px;
+    border-radius: 14px;
+  }
+
+  .footer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+    </style>
+<link rel="stylesheet" href="butterfly-hero.css">
+<style>
+  /* 封面横幅：宽度跟 .app 对齐，高度收成一条，不抢主体区域的视线 */
+  .hero-slot { margin: 0 0 22px; }
+  .hero-slot .butterfly-hero {
+    --bh-ratio: auto;
+    --bh-min-height: 0;
+    --bh-radius: 16px;
+    height: 260px;
+    border-color: var(--border);
+  }
+  @media (max-width: 640px) {
+    .hero-slot { margin-bottom: 16px; }
+    .hero-slot .butterfly-hero { height: 176px; --bh-radius: 12px; }
+  }
+</style>
+  </head>
+  <body>
+<svg class="icon-sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="icon-book" viewBox="0 0 24 24">
+    <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5V5.5Z"></path>
+    <path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20"></path>
+    <path d="m9 9 2 2 4-4"></path>
+  </symbol>
+  <symbol id="icon-upload" viewBox="0 0 24 24">
+    <path d="M12 16V4"></path>
+    <path d="m7 9 5-5 5 5"></path>
+    <path d="M5 20h14"></path>
+  </symbol>
+  <symbol id="icon-download" viewBox="0 0 24 24">
+    <path d="M12 4v12"></path>
+    <path d="m7 11 5 5 5-5"></path>
+    <path d="M5 20h14"></path>
+  </symbol>
+  <symbol id="icon-search" viewBox="0 0 24 24">
+    <circle cx="11" cy="11" r="6.5"></circle>
+    <path d="m16 16 4 4"></path>
+  </symbol>
+  <symbol id="icon-close" viewBox="0 0 24 24">
+    <path d="m6 6 12 12"></path>
+    <path d="m18 6-12 12"></path>
+  </symbol>
+  <symbol id="icon-chevron-left" viewBox="0 0 24 24">
+    <path d="m14.5 6-6 6 6 6"></path>
+  </symbol>
+  <symbol id="icon-chevron-right" viewBox="0 0 24 24">
+    <path d="m9.5 6 6 6-6 6"></path>
+  </symbol>
+  <symbol id="icon-check" viewBox="0 0 24 24">
+    <path d="m5 12.5 4.2 4.2L19 7"></path>
+  </symbol>
+  <symbol id="icon-x" viewBox="0 0 24 24">
+    <path d="m7 7 10 10"></path>
+    <path d="m17 7-10 10"></path>
+  </symbol>
+  <symbol id="icon-note" viewBox="0 0 24 24">
+    <path d="M5 4.5h14a1 1 0 0 1 1 1V15l-5 5H5a1 1 0 0 1-1-1V5.5a1 1 0 0 1 1-1Z"></path>
+    <path d="M15 20v-5h5"></path>
+    <path d="M8 9h8M8 13h5"></path>
+  </symbol>
+  <symbol id="icon-trash" viewBox="0 0 24 24">
+    <path d="M4 7h16"></path>
+    <path d="M9 7V4h6v3"></path>
+    <path d="m6.5 7 1 13h9l1-13"></path>
+    <path d="M10 11v5M14 11v5"></path>
+  </symbol>
+  <symbol id="icon-check-circle" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="8.5"></circle>
+    <path d="m8 12 2.7 2.7L16 9"></path>
+  </symbol>
+  <symbol id="icon-alert-circle" viewBox="0 0 24 24">
+    <circle cx="12" cy="12" r="8.5"></circle>
+    <path d="M12 7.5v5.5"></path>
+    <path d="M12 16.5h.01"></path>
+  </symbol>
+  <symbol id="icon-file" viewBox="0 0 24 24">
+    <path d="M6 3h8l4 4v14H6z"></path>
+    <path d="M14 3v5h4"></path>
+    <path d="M9 12h6M9 16h6"></path>
+  </symbol>
+  <symbol id="icon-arrow-right" viewBox="0 0 24 24">
+    <path d="M5 12h14"></path>
+    <path d="m14 7 5 5-5 5"></path>
+  </symbol>
+  <symbol id="icon-plus" viewBox="0 0 24 24">
+    <path d="M12 5v14"></path>
+    <path d="M5 12h14"></path>
+  </symbol>
+  <symbol id="icon-edit" viewBox="0 0 24 24">
+    <path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3Z"></path>
+    <path d="m13.5 6.5 3 3"></path>
+  </symbol>
+  <symbol id="icon-pin" viewBox="0 0 24 24">
+    <path d="M9 4h6l-1 5 4 3v2H6v-2l4-3-1-5Z"></path>
+    <path d="M12 14v6"></path>
+  </symbol>
+</svg>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg class="icon"><use href="#icon-book"></use></svg>
+      </div>
+      <div>
+        <h1>错题本</h1>
+        <p>导入 · 练习 · 笔记</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="btn" type="button" id="backupBtn">
+        <svg class="icon" aria-hidden="true"><use href="#icon-download"></use></svg>
+        备份与恢复
+      </button>
+      <button class="btn btn-primary" type="button" id="importBtn">
+        <svg class="icon" aria-hidden="true"><use href="#icon-upload"></use></svg>
+        导入题目
+      </button>
+    </div>
+  </header>
+  <!-- 封面横幅：背景短片 + 粒子拼字。不想要就整段删掉，不影响其它功能 -->
+  <section class="hero-slot" aria-label="封面">
+    <div class="butterfly-hero butterfly-hero--on-dark" data-butterfly-hero
+         data-text="Shunyi Cheng" data-ink="#f2f1ec" data-accent="#fb923c"
+         data-loop="1"
+         data-font='"Inter","PingFang SC","Microsoft YaHei",sans-serif'>
+      <video class="butterfly-hero__video" data-bh-video muted playsinline webkit-playsinline
+             preload="auto" aria-hidden="true"
+             controlsList="nodownload nofullscreen noremoteplayback"
+             disablePictureInPicture disableRemotePlayback>
+        <source src="background.mp4" type="video/mp4">
+      </video>
+      <canvas class="butterfly-hero__canvas" data-bh-canvas aria-hidden="true"></canvas>
+    </div>
+  </section>
+
+  <div class="view-bar">
+    <nav class="view-tabs" role="tablist" aria-label="页面切换">
+      <button class="view-tab active" type="button" data-view="practice" role="tab" aria-selected="true">
+        错题练习
+      </button>
+      <button class="view-tab" type="button" data-view="mnemonics" role="tab" aria-selected="false">
+        口诀本
+      </button>
+      <button class="view-tab" type="button" data-view="cautions" role="tab" aria-selected="false">
+        做题注意
+      </button>
+    </nav>
+    <span class="view-hint" id="viewHint">题库、答题与笔记</span>
+  </div>
+
+  <div class="view-panel" id="practiceView">
+    <section class="stats" id="stats" aria-label="学习统计"></section>
+
+    <main class="workspace">
+      <aside class="sidebar" aria-label="题目列表">
+        <div class="search-wrap">
+          <svg class="icon" aria-hidden="true"><use href="#icon-search"></use></svg>
+          <label class="sr-only" for="searchInput">搜索题目</label>
+          <input class="search" id="searchInput" type="search" autocomplete="off"
+                 placeholder="搜索题干、标签或笔记">
+          <button class="search-clear" id="clearSearch" type="button" aria-label="清除搜索">
+            <svg class="icon" aria-hidden="true"><use href="#icon-close"></use></svg>
+          </button>
+        </div>
+
+        <div class="filters" id="filters" role="group" aria-label="按状态筛选"></div>
+
+        <label class="sr-only" for="subjectFilter">按学科筛选</label>
+        <select class="subject-select" id="subjectFilter"></select>
+
+        <div class="list-head">
+          <span id="listLabel">全部题目</span>
+          <span id="listCount"></span>
+        </div>
+        <div class="question-list" id="questionList"></div>
+      </aside>
+
+      <section class="main-panel" id="mainPanel"></section>
+    </main>
+  </div>
+
+  <section class="view-panel" id="mnemonicsView" hidden>
+    <div class="mnemonic-toolbar">
+      <div>
+        <h2>口诀本</h2>
+        <p>把容易混淆的知识点，压缩成自己的记忆线索。</p>
+      </div>
+      <button class="btn btn-primary" type="button" id="newMnemonicBtn">
+        <svg class="icon" aria-hidden="true"><use href="#icon-plus"></use></svg>
+        新建口诀
+      </button>
+    </div>
+
+    <div class="mnemonic-controls">
+      <div class="search-wrap">
+        <svg class="icon" aria-hidden="true"><use href="#icon-search"></use></svg>
+        <label class="sr-only" for="mnemonicSearch">搜索口诀</label>
+        <input class="search" id="mnemonicSearch" type="search" autocomplete="off"
+               placeholder="搜索口诀、学科或标签">
+        <button class="search-clear" id="clearMnemonicSearch" type="button" aria-label="清除搜索">
+          <svg class="icon" aria-hidden="true"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+      <select class="subject-select" id="mnemonicSubjectFilter" aria-label="按学科筛选口诀"></select>
+    </div>
+
+    <div class="mnemonic-grid" id="mnemonicGrid"></div>
+  </section>
+
+  <section class="view-panel" id="cautionsView" hidden>
+    <div class="mnemonic-toolbar">
+      <div>
+        <h2>做题注意</h2>
+        <p>把审题、计算和选项里的坑，提前写成可执行的提醒。</p>
+      </div>
+      <button class="btn btn-primary" type="button" id="newCautionBtn">
+        <svg class="icon" aria-hidden="true"><use href="#icon-plus"></use></svg>
+        新建注意
+      </button>
+    </div>
+
+    <div class="caution-controls">
+      <div class="search-wrap">
+        <svg class="icon" aria-hidden="true"><use href="#icon-search"></use></svg>
+        <label class="sr-only" for="cautionSearch">搜索做题注意</label>
+        <input class="search" id="cautionSearch" type="search" autocomplete="off"
+               placeholder="搜索注意、学科或标签">
+        <button class="search-clear" id="clearCautionSearch" type="button" aria-label="清除搜索">
+          <svg class="icon" aria-hidden="true"><use href="#icon-close"></use></svg>
+        </button>
+      </div>
+      <select class="subject-select" id="cautionSubjectFilter" aria-label="按学科筛选注意"></select>
+      <select class="subject-select" id="cautionStatusFilter" aria-label="按状态筛选注意">
+        <option value="all">全部状态</option>
+        <option value="pending">待注意</option>
+        <option value="done">已注意</option>
+      </select>
+    </div>
+
+    <div class="mnemonic-grid" id="cautionGrid"></div>
+  </section>
+
+  <footer class="footer">
+    <div>数据仅保存在当前浏览器，不会上传到服务器。<span class="app-version">v2026.10.20.5</span></div>
+    <div class="keys" aria-label="键盘快捷键">
+      <kbd>A</kbd><span>–</span><kbd>E</kbd><span>选择</span>
+      <span>·</span>
+      <kbd>Enter</kbd><span>提交</span>
+      <span>·</span>
+      <kbd>←</kbd><kbd>→</kbd><span>切题</span>
+    </div>
+  </footer>
+</div>
+
+<div id="modalRoot"></div>
+<div class="toast-root" id="toastRoot" aria-live="polite" aria-atomic="true"></div>
+<div class="sr-only" id="liveRegion" aria-live="polite"></div>
+
+<noscript>
+  <div style="padding:24px;text-align:center;">这个页面需要启用 JavaScript 才能使用。</div>
+</noscript>
+
+    <script>
+(() => {
+  "use strict";
+
+  const STORAGE_KEY = "cuotiben.app.v1";
+  const AUTO_BACKUP_KEY = "cuotiben.autobackup.v1";
+  const AUTO_BACKUP_LIMIT = 5;
+  const FILTERS = [
+    { key: "all", label: "全部" },
+    { key: "new", label: "未做" },
+    { key: "wrong", label: "做错" },
+    { key: "mastered", label: "已掌握" },
+  ];
+
+  const DEMO_QUESTIONS = [
+    {
+      stem: "慢性心力衰竭“新四联”治疗不包括",
+      options: ["ARNI", "β受体阻滞剂", "醛固酮受体拮抗剂", "地高辛"],
+      answer: "D",
+      explanation:
+        "射血分数降低的心衰“新四联”包括 ARNI/ACEI/ARB、β受体阻滞剂、醛固酮受体拮抗剂和 SGLT2 抑制剂。地高辛用于症状控制，不属于改善预后的核心四联。",
+      subject: "内科学",
+      tags: ["心力衰竭", "指南"],
+    },
+    {
+      stem: "目前推荐的幽门螺杆菌根除治疗方案是",
+      options: [
+        "单用质子泵抑制剂",
+        "铋剂四联方案，疗程 14 天",
+        "单用阿莫西林",
+        "单用抗酸药",
+      ],
+      answer: "B",
+      explanation:
+        "我国指南推荐铋剂四联方案（质子泵抑制剂 + 铋剂 + 两种抗菌药物）作为主要经验性根除方案，疗程通常为 14 天。",
+      subject: "内科学",
+      tags: ["消化性溃疡", "幽门螺杆菌"],
+    },
+    {
+      stem: "关于颈动脉窦压力感受性反射，正确的有",
+      options: [
+        "传入神经为窦神经",
+        "对持续性高血压的调定点不发生任何改变",
+        "动脉血压升高时反射性心率减慢",
+        "切断压力感受器传入神经后血压波动增大",
+      ],
+      answer: "ACD",
+      explanation:
+        "压力感受性反射在血压急性变化时发挥缓冲作用；慢性高血压时压力感受器可发生重调定，因此 B 错误。",
+      subject: "生理学",
+      tags: ["血压调节", "多选"],
+    },
+    {
+      stem: "股骨颈骨折最易发生的并发症是",
+      options: [
+        "股骨头缺血性坏死",
+        "骨筋膜室综合征",
+        "脂肪栓塞",
+        "创伤性关节炎",
+      ],
+      answer: "A",
+      explanation:
+        "股骨颈骨折可损伤旋股内侧动脉等股骨头血供，导致股骨头缺血性坏死和骨折不愈合。",
+      subject: "外科学",
+      tags: ["骨折", "并发症"],
+    },
+  ];
+
+  const DEMO_CAUTIONS = [
+    {
+      title: "先看最后问的是“正确”还是“错误”",
+      content: "题干再长，先扫一眼最后一句。问“错误的是”时，不要条件反射选正确项。",
+      subject: "通用",
+      tags: ["审题"],
+    },
+    {
+      title: "X 型题没有部分分",
+      content: "多选、少选、错选都不得分。只选自己能确定的选项，拿不准的不要硬凑。",
+      subject: "考试策略",
+      tags: ["X型题", "时间分配"],
+    },
+    {
+      title: "病例题先抓三件事",
+      content: "主诉和病程、生命体征、禁忌证。先定急危重，再选检查和治疗。",
+      subject: "临床思维",
+      tags: ["病例题"],
+    },
+    {
+      title: "计算结果检查单位和正负号",
+      content: "尤其是 mmol/L、mg/dL、ml/min 和阴离子间隙，算完回头看一眼单位。",
+      subject: "通用",
+      tags: ["计算", "单位"],
+    },
+  ];
+
+  const els = {
+    stats: document.getElementById("stats"),
+    filters: document.getElementById("filters"),
+    subjectFilter: document.getElementById("subjectFilter"),
+    searchInput: document.getElementById("searchInput"),
+    clearSearch: document.getElementById("clearSearch"),
+    listLabel: document.getElementById("listLabel"),
+    listCount: document.getElementById("listCount"),
+    questionList: document.getElementById("questionList"),
+    main: document.getElementById("mainPanel"),
+    importBtn: document.getElementById("importBtn"),
+    backupBtn: document.getElementById("backupBtn"),
+    practiceView: document.getElementById("practiceView"),
+    mnemonicsView: document.getElementById("mnemonicsView"),
+    cautionsView: document.getElementById("cautionsView"),
+    viewHint: document.getElementById("viewHint"),
+    newMnemonicBtn: document.getElementById("newMnemonicBtn"),
+    newCautionBtn: document.getElementById("newCautionBtn"),
+    mnemonicSearch: document.getElementById("mnemonicSearch"),
+    clearMnemonicSearch: document.getElementById("clearMnemonicSearch"),
+    mnemonicSubjectFilter: document.getElementById("mnemonicSubjectFilter"),
+    mnemonicGrid: document.getElementById("mnemonicGrid"),
+    cautionSearch: document.getElementById("cautionSearch"),
+    clearCautionSearch: document.getElementById("clearCautionSearch"),
+    cautionSubjectFilter: document.getElementById("cautionSubjectFilter"),
+    cautionStatusFilter: document.getElementById("cautionStatusFilter"),
+    cautionGrid: document.getElementById("cautionGrid"),
+    modalRoot: document.getElementById("modalRoot"),
+    toastRoot: document.getElementById("toastRoot"),
+    liveRegion: document.getElementById("liveRegion"),
+  };
+
+  const state = {
+    questions: [],
+    mnemonics: [],
+    cautions: [],
+    currentId: null,
+    filter: "all",
+    subject: "all",
+    query: "",
+    view: "practice",
+    settings: { autoBackup: true, autoBackupCounter: 0 },
+  };
+
+  const ui = {
+    selection: [],
+    revealed: false,
+    noteTimer: null,
+    noteDirty: false,
+    noteTarget: null,
+    modalOpen: false,
+    lastFocus: null,
+    mnemonicQuery: "",
+    mnemonicSubject: "all",
+    editingMnemonicId: null,
+    cautionQuery: "",
+    cautionSubject: "all",
+    cautionStatus: "all",
+    editingCautionId: null,
+    editingQuestionId: null,
+    backupPreview: null,
+  };
+
+  let storageAvailable = true;
+  let storageWarned = false;
+  let ocrWorkerPromise = null;
+  let ocrBusy = false;
+  let tesseractLoadingPromise = null;
+  let autoBackupWarned = false;
+
+  function $(selector, root = document) {
+    return root.querySelector(selector);
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, (char) => {
+      return {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      }[char];
+    });
+  }
+
+  function icon(name, className = "icon") {
+    return `<svg class="${className}" aria-hidden="true"><use href="#icon-${name}"></use></svg>`;
+  }
+
+  function letterAt(index) {
+    return String.fromCharCode(65 + index);
+  }
+
+  function uid() {
+    if (window.crypto && typeof window.crypto.randomUUID === "function") {
+      return window.crypto.randomUUID();
+    }
+    return `q-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  function numberToAnswer(number, optionCount) {
+    if (!Number.isFinite(number)) return "";
+    if (number === 0) return optionCount > 0 ? "A" : "";
+    if (number >= 1 && number <= optionCount) return letterAt(number - 1);
+    return "";
+  }
+
+  function normalizeAnswer(value, optionCount) {
+    if (value === null || value === undefined) return "";
+    if (typeof value === "number") return numberToAnswer(value, optionCount);
+
+    const text = String(value).trim().toUpperCase();
+    if (!text) return "";
+
+    if (/^\d+(?:\s*[,，、]\s*\d+)*$/.test(text)) {
+      const numbers = text.split(/[,，、\s]+/).filter(Boolean).map(Number);
+      const letters = numbers.map((n) => numberToAnswer(n, optionCount)).filter(Boolean);
+      return [...new Set(letters)].sort().join("");
+    }
+
+    const letters = text.match(/[A-F]/g) || [];
+    return [...new Set(letters)]
+      .filter((letter) => letter.charCodeAt(0) - 65 < optionCount)
+      .sort()
+      .join("");
+  }
+
+  function normalizeStem(stem) {
+    return String(stem ?? "")
+      .replace(/\s+/g, "")
+      .replace(/[，。；：、,.!?！？;:（）()【】\[\]]/g, "")
+      .toLowerCase();
+  }
+
+  function truncate(value, maxLength) {
+    const text = String(value ?? "");
+    return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
+  }
+
+  function getStatus(question) {
+    if (question.mastered) return { key: "mastered", label: "已掌握" };
+    if (question.attempts > 0 && question.lastResult === "wrong") {
+      return { key: "wrong", label: "做错" };
+    }
+    if (question.attempts > 0) return { key: "correct", label: "已做对" };
+    return { key: "new", label: "未做" };
+  }
+
+  function normalizeStoredQuestion(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const stem = String(raw.stem ?? raw.question ?? raw.title ?? "").trim();
+    if (!stem) return null;
+
+    let options = [];
+    if (Array.isArray(raw.options)) {
+      options = raw.options.map((item, index) => {
+        if (item && typeof item === "object") {
+          return {
+            key: letterAt(index),
+            text: String(item.text ?? item.label ?? item.content ?? "").trim(),
+          };
+        }
+        return { key: letterAt(index), text: String(item ?? "").trim() };
+      });
+    } else if (raw.options && typeof raw.options === "object") {
+      options = Object.keys(raw.options)
+        .filter((key) => /^[A-F]$/i.test(key))
+        .sort()
+        .map((key) => ({ key: key.toUpperCase(), text: String(raw.options[key] ?? "").trim() }));
+    }
+    options = options.filter((option) => option.text);
+    if (options.length < 2) return null;
+    options = options.map((option, index) => ({ key: letterAt(index), text: option.text }));
+
+    const answer = normalizeAnswer(raw.answer, options.length);
+    const tags = Array.isArray(raw.tags)
+      ? raw.tags.map(String)
+      : String(raw.tags ?? "")
+          .split(/[,，、;；]/)
+          .map((tag) => tag.trim())
+          .filter(Boolean);
+
+    return {
+      id: typeof raw.id === "string" && raw.id ? raw.id : uid(),
+      stem,
+      options,
+      answer,
+      explanation: String(raw.explanation ?? "").trim(),
+      subject: String(raw.subject ?? "未分类").trim() || "未分类",
+      tags: [...new Set(tags)].slice(0, 6),
+      caseId: typeof raw.caseId === "string" && raw.caseId ? raw.caseId : null,
+      caseTitle: String(raw.caseTitle ?? "").trim(),
+      caseText: String(raw.caseText ?? raw.case ?? "").trim(),
+      caseOrder: Number(raw.caseOrder) || 0,
+      caseTotal: Number(raw.caseTotal) || 0,
+      note: String(raw.note ?? ""),
+      attempts: Number(raw.attempts) || 0,
+      correctCount: Number(raw.correctCount) || 0,
+      lastResult: raw.lastResult === "correct" || raw.lastResult === "wrong" ? raw.lastResult : null,
+      mastered: Boolean(raw.mastered),
+      createdAt: Number(raw.createdAt) || Date.now(),
+      updatedAt: Number(raw.updatedAt) || Date.now(),
+    };
+  }
+
+  function normalizeMnemonic(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const title = String(raw.title ?? raw.name ?? "").trim();
+    const content = String(raw.content ?? raw.text ?? raw.body ?? "").trim();
+    if (!title || !content) return null;
+    const tags = Array.isArray(raw.tags)
+      ? raw.tags.map(String)
+      : String(raw.tags ?? "")
+          .split(/[,，、;；]/)
+          .map((tag) => tag.trim())
+          .filter(Boolean);
+
+    return {
+      id: typeof raw.id === "string" && raw.id ? raw.id : uid(),
+      title,
+      content,
+      subject: String(raw.subject ?? "未分类").trim() || "未分类",
+      tags: [...new Set(tags)].slice(0, 6),
+      pinned: Boolean(raw.pinned),
+      createdAt: Number(raw.createdAt) || Date.now(),
+      updatedAt: Number(raw.updatedAt) || Date.now(),
+    };
+  }
+
+  function normalizeCaution(raw) {
+    const base = normalizeMnemonic(raw);
+    if (!base) return null;
+    return {
+      ...base,
+      checked: Boolean(raw.checked),
+    };
+  }
+
+  function loadState() {
+    try {
+      const probe = "__cuotiben_probe__";
+      window.localStorage.setItem(probe, "1");
+      window.localStorage.removeItem(probe);
+    } catch (error) {
+      storageAvailable = false;
+      return;
+    }
+
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      const list = Array.isArray(data) ? data : data && data.questions;
+      if (!Array.isArray(list)) return;
+      state.questions = list.map(normalizeStoredQuestion).filter(Boolean);
+
+      if (data && !Array.isArray(data)) {
+        if (FILTERS.some((filter) => filter.key === data.filter)) state.filter = data.filter;
+        if (typeof data.subject === "string") state.subject = data.subject;
+        if (typeof data.currentId === "string") state.currentId = data.currentId;
+        if (Array.isArray(data.mnemonics)) {
+          state.mnemonics = data.mnemonics.map(normalizeMnemonic).filter(Boolean);
+        }
+        if (Array.isArray(data.cautions)) {
+          state.cautions = data.cautions.map(normalizeCaution).filter(Boolean);
+        }
+        if (data.view === "mnemonics" || data.view === "cautions") {
+          state.view = data.view;
+        }
+        if (data.settings && typeof data.settings.autoBackup === "boolean") {
+          state.settings.autoBackup = data.settings.autoBackup;
+        }
+        if (data.settings) {
+          state.settings.autoBackupCounter =
+            Number(data.settings.autoBackupCounter) || 0;
+        }
+      }
+
+      if (state.questions.length && !state.questions.some((q) => q.id === state.currentId)) {
+        state.currentId = state.questions[0].id;
+      }
+    } catch (error) {
+      console.warn("读取本地数据失败", error);
+    }
+  }
+
+  function saveState() {
+    if (!storageAvailable) return false;
+    try {
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          version: 3,
+          questions: state.questions,
+          mnemonics: state.mnemonics,
+          cautions: state.cautions,
+          currentId: state.currentId,
+          filter: state.filter,
+          subject: state.subject,
+          view: state.view,
+          settings: state.settings,
+        }),
+      );
+      return true;
+    } catch (error) {
+      if (!storageWarned) {
+        storageWarned = true;
+        toast("本地存储空间不足，最近的修改可能无法保存", "error");
+      }
+      return false;
+    }
+  }
+
+  function loadAutoBackups() {
+    if (!storageAvailable) return [];
+    try {
+      const raw = window.localStorage.getItem(AUTO_BACKUP_KEY);
+      if (!raw) return [];
+      const list = JSON.parse(raw);
+      if (!Array.isArray(list)) return [];
+      return list
+        .filter((snapshot) => snapshot && Array.isArray(snapshot.questions))
+        .slice(0, AUTO_BACKUP_LIMIT);
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function saveAutoBackups(list) {
+    if (!storageAvailable) return false;
+    let current = list.slice(0, AUTO_BACKUP_LIMIT);
+    while (current.length) {
+      try {
+        window.localStorage.setItem(AUTO_BACKUP_KEY, JSON.stringify(current));
+        return true;
+      } catch (error) {
+        current = current.slice(0, -1);
+      }
+    }
+    if (!autoBackupWarned) {
+      autoBackupWarned = true;
+      toast("浏览器存储空间不足，自动备份暂时无法保存", "error");
+    }
+    return false;
+  }
+
+  function createAutoBackup(reason = "timer", force = false) {
+    if (!storageAvailable) return null;
+    if (!state.settings.autoBackup && !force) return null;
+    if (!state.questions.length && !state.mnemonics.length && !state.cautions.length) {
+      return null;
+    }
+
+    const payload = {
+      questions: state.questions,
+      mnemonics: state.mnemonics,
+      cautions: state.cautions,
+    };
+    const signature = JSON.stringify(payload);
+    const list = loadAutoBackups();
+    if (list[0]) {
+      const lastSignature = JSON.stringify({
+        questions: list[0].questions || [],
+        mnemonics: list[0].mnemonics || [],
+        cautions: list[0].cautions || [],
+      });
+      if (lastSignature === signature) {
+        return null;
+      }
+    }
+
+    const snapshot = {
+      id: uid(),
+      createdAt: Date.now(),
+      reason,
+      questions: JSON.parse(JSON.stringify(state.questions)),
+      mnemonics: JSON.parse(JSON.stringify(state.mnemonics)),
+      cautions: JSON.parse(JSON.stringify(state.cautions)),
+    };
+    list.unshift(snapshot);
+    if (saveAutoBackups(list)) {
+      return snapshot;
+    }
+    return null;
+  }
+
+  function markContentChange(amount = 1) {
+    if (!state.settings.autoBackup) return;
+    const increment = Math.max(0, Number(amount) || 0);
+    if (!increment) return;
+    state.settings.autoBackupCounter =
+      (Number(state.settings.autoBackupCounter) || 0) + increment;
+    if (state.settings.autoBackupCounter >= 5) {
+      const snapshot = createAutoBackup("count");
+      if (snapshot) state.settings.autoBackupCounter = 0;
+    }
+  }
+
+  function autoBackupReasonLabel(reason) {
+    return {
+      timer: "自动",
+      leave: "离开页面",
+      manual: "手动",
+      first: "首次",
+      count: "满5次内容",
+      "before-restore": "恢复前保护",
+    }[reason] || "自动";
+  }
+
+  function renderAutoBackupList() {
+    const container = document.getElementById("autoBackupList");
+    if (!container) return;
+    const progress = document.getElementById("autoBackupProgress");
+    if (progress) {
+      progress.textContent = state.settings.autoBackup
+        ? `已累计 ${Number(state.settings.autoBackupCounter) || 0}/5 次内容变更，满 5 次自动备份。`
+        : "自动备份已关闭。";
+    }
+    const list = loadAutoBackups();
+    if (!list.length) {
+      container.innerHTML = `<div class="auto-backup-empty">还没有自动备份。</div>`;
+      return;
+    }
+    container.innerHTML = list
+      .map((snapshot) => {
+        const time = new Date(snapshot.createdAt).toLocaleString("zh-CN");
+        return `
+          <div class="auto-backup-row">
+            <div class="auto-backup-meta">
+              <div class="auto-backup-time">${escapeHtml(time)}</div>
+              <div class="auto-backup-counts">
+                ${escapeHtml(autoBackupReasonLabel(snapshot.reason))} ·
+                ${snapshot.questions.length} 题 ·
+                ${(snapshot.mnemonics || []).length} 条口诀 ·
+                ${(snapshot.cautions || []).length} 条注意
+              </div>
+            </div>
+            <button class="btn btn-small" type="button" data-auto-backup-id="${escapeHtml(snapshot.id)}">
+              恢复
+            </button>
+          </div>
+        `;
+      })
+      .join("");
+  }
+
+  function restoreAutoBackup(id) {
+    const snapshot = loadAutoBackups().find((item) => item.id === id);
+    if (!snapshot) return;
+    if (!window.confirm("确定用这份浏览器自动备份覆盖当前题库吗？当前内容会先自动备份一份。")) {
+      return;
+    }
+    createAutoBackup("before-restore", true);
+    state.questions = snapshot.questions.map(normalizeStoredQuestion).filter(Boolean);
+    state.mnemonics = (snapshot.mnemonics || []).map(normalizeMnemonic).filter(Boolean);
+    state.cautions = (snapshot.cautions || []).map(normalizeCaution).filter(Boolean);
+    state.currentId = null;
+    state.filter = "all";
+    state.subject = "all";
+    state.query = "";
+    ui.mnemonicQuery = "";
+    ui.mnemonicSubject = "all";
+    ui.cautionQuery = "";
+    ui.cautionSubject = "all";
+    ui.cautionStatus = "all";
+    ui.selection = [];
+    ui.revealed = false;
+    state.settings.autoBackupCounter = 0;
+    saveState();
+    closeBackupModal();
+    renderAll();
+    toast(
+      `已恢复自动备份：${state.questions.length} 题、${state.mnemonics.length} 条口诀、${state.cautions.length} 条注意`,
+    );
+  }
+
+  function getFiltered() {
+    const query = state.query.trim().toLowerCase();
+    return state.questions.filter((question) => {
+      if (state.subject !== "all" && question.subject !== state.subject) return false;
+
+      const status = getStatus(question);
+      if (state.filter === "new" && status.key !== "new") return false;
+      if (state.filter === "wrong" && status.key !== "wrong") return false;
+      if (state.filter === "mastered" && !question.mastered) return false;
+
+      if (query) {
+        const haystack = [
+          question.stem,
+          question.subject,
+          question.tags.join(" "),
+          question.note,
+          question.explanation,
+          question.options.map((option) => option.text).join(" "),
+        ]
+          .join(" ")
+          .toLowerCase();
+        if (!haystack.includes(query)) return false;
+      }
+      return true;
+    });
+  }
+
+  function getCurrentQuestion() {
+    const list = getFiltered();
+    if (!list.length) {
+      state.currentId = null;
+      return null;
+    }
+    if (!list.some((question) => question.id === state.currentId)) {
+      state.currentId = list[0].id;
+    }
+    return list.find((question) => question.id === state.currentId) || null;
+  }
+
+  function getFilteredMnemonics() {
+    const query = ui.mnemonicQuery.trim().toLowerCase();
+    return state.mnemonics
+      .filter((mnemonic) => {
+        if (ui.mnemonicSubject !== "all" && mnemonic.subject !== ui.mnemonicSubject) {
+          return false;
+        }
+        if (!query) return true;
+        const haystack = [
+          mnemonic.title,
+          mnemonic.content,
+          mnemonic.subject,
+          mnemonic.tags.join(" "),
+        ]
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(query);
+      })
+      .sort((a, b) => {
+        if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+        return b.updatedAt - a.updatedAt;
+      });
+  }
+
+  function renderView() {
+    const isMnemonics = state.view === "mnemonics";
+    const isCautions = state.view === "cautions";
+    els.practiceView.hidden = isMnemonics || isCautions;
+    els.mnemonicsView.hidden = !isMnemonics;
+    els.cautionsView.hidden = !isCautions;
+    document.querySelectorAll(".view-tab").forEach((button) => {
+      const active = button.dataset.view === state.view;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-selected", String(active));
+    });
+    if (isMnemonics) {
+      const subjects = new Set(state.mnemonics.map((item) => item.subject));
+      els.viewHint.textContent = `${state.mnemonics.length} 条口诀 · ${subjects.size} 个学科`;
+    } else if (isCautions) {
+      const pending = state.cautions.filter((item) => !item.checked).length;
+      const done = state.cautions.filter((item) => item.checked).length;
+      els.viewHint.textContent = `${pending} 条待注意 · ${done} 条已注意`;
+    } else {
+      els.viewHint.textContent = "题库、答题与笔记";
+    }
+  }
+
+  function renderMnemonics() {
+    const subjects = [
+      ...new Set(state.mnemonics.map((mnemonic) => mnemonic.subject)),
+    ].sort((a, b) => a.localeCompare(b, "zh-Hans-CN"));
+    if (ui.mnemonicSubject !== "all" && !subjects.includes(ui.mnemonicSubject)) {
+      ui.mnemonicSubject = "all";
+    }
+    els.mnemonicSubjectFilter.innerHTML =
+      `<option value="all">全部学科</option>` +
+      subjects
+        .map((subject) => `<option value="${escapeHtml(subject)}">${escapeHtml(subject)}</option>`)
+        .join("");
+    els.mnemonicSubjectFilter.value = ui.mnemonicSubject;
+    els.mnemonicSubjectFilter.disabled = state.mnemonics.length === 0;
+    els.clearMnemonicSearch.classList.toggle("is-visible", Boolean(ui.mnemonicQuery));
+
+    const list = getFilteredMnemonics();
+    if (!state.mnemonics.length) {
+      els.mnemonicGrid.innerHTML = `
+        <div class="mnemonic-empty">
+          <svg class="empty-art" viewBox="0 0 120 120" fill="none" aria-hidden="true">
+            <rect x="27" y="17" width="66" height="86" rx="10" stroke="currentColor" stroke-width="1.5"></rect>
+            <path d="M41 39h38M41 53h38M41 67h23" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+            <path d="M72 82h16M80 74v16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path>
+          </svg>
+          <h3>还没有口诀</h3>
+          <p>把容易混淆的机制、分型或治疗顺序，压缩成一句自己的记忆线索。</p>
+          <button class="btn btn-primary" type="button" data-mnemonic-action="new">
+            ${icon("plus")}新建第一条口诀
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    if (!list.length) {
+      els.mnemonicGrid.innerHTML = `
+        <div class="mnemonic-empty">
+          <h3>没有符合条件的口诀</h3>
+          <p>换个学科，或清除搜索词再试。</p>
+          <button class="btn" type="button" data-mnemonic-action="clear-filter">清除筛选</button>
+        </div>
+      `;
+      return;
+    }
+
+    els.mnemonicGrid.innerHTML = list
+      .map((mnemonic) => {
+        const date = new Date(mnemonic.updatedAt).toLocaleDateString("zh-CN");
+        return `
+          <article class="mnemonic-card ${mnemonic.pinned ? "pinned" : ""}">
+            <div class="mnemonic-card-head">
+              <div>
+                <h3 class="mnemonic-title">${escapeHtml(mnemonic.title)}</h3>
+                <div class="mnemonic-meta">
+                  <span class="badge">${escapeHtml(mnemonic.subject)}</span>
+                  ${mnemonic.pinned ? `<span class="tag">置顶</span>` : ""}
+                  <span>${date}</span>
+                </div>
+              </div>
+              <div class="mnemonic-actions">
+                <button
+                  class="icon-btn ${mnemonic.pinned ? "is-pinned" : ""}"
+                  type="button"
+                  data-mnemonic-action="pin"
+                  data-id="${escapeHtml(mnemonic.id)}"
+                  aria-label="${mnemonic.pinned ? "取消置顶" : "置顶口诀"}"
+                  title="${mnemonic.pinned ? "取消置顶" : "置顶口诀"}"
+                >${icon("pin")}</button>
+                <button
+                  class="icon-btn"
+                  type="button"
+                  data-mnemonic-action="edit"
+                  data-id="${escapeHtml(mnemonic.id)}"
+                  aria-label="编辑口诀"
+                  title="编辑口诀"
+                >${icon("edit")}</button>
+                <button
+                  class="icon-btn"
+                  type="button"
+                  data-mnemonic-action="delete"
+                  data-id="${escapeHtml(mnemonic.id)}"
+                  aria-label="删除口诀"
+                  title="删除口诀"
+                >${icon("trash")}</button>
+              </div>
+            </div>
+            <div class="mnemonic-content">${escapeHtml(mnemonic.content)}</div>
+            ${
+              mnemonic.tags.length
+                ? `<div class="mnemonic-tags">${mnemonic.tags
+                    .map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`)
+                    .join("")}</div>`
+                : ""
+            }
+          </article>
+        `;
+      })
+      .join("");
+  }
+
+  function getFilteredCautions() {
+    const query = ui.cautionQuery.trim().toLowerCase();
+    return state.cautions
+      .filter((caution) => {
+        if (ui.cautionSubject !== "all" && caution.subject !== ui.cautionSubject) {
+          return false;
+        }
+        if (ui.cautionStatus === "pending" && caution.checked) return false;
+        if (ui.cautionStatus === "done" && !caution.checked) return false;
+        if (!query) return true;
+        const haystack = [
+          caution.title,
+          caution.content,
+          caution.subject,
+          caution.tags.join(" "),
+        ]
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(query);
+      })
+      .sort((a, b) => {
+        if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+        return b.updatedAt - a.updatedAt;
+      });
+  }
+
+  function renderCautions() {
+    const subjects = [
+      ...new Set(state.cautions.map((caution) => caution.subject)),
+    ].sort((a, b) => a.localeCompare(b, "zh-Hans-CN"));
+    if (ui.cautionSubject !== "all" && !subjects.includes(ui.cautionSubject)) {
+      ui.cautionSubject = "all";
+    }
+    els.cautionSubjectFilter.innerHTML =
+      `<option value="all">全部学科</option>` +
+      subjects
+        .map((subject) => `<option value="${escapeHtml(subject)}">${escapeHtml(subject)}</option>`)
+        .join("");
+    els.cautionSubjectFilter.value = ui.cautionSubject;
+    els.cautionSubjectFilter.disabled = state.cautions.length === 0;
+    els.cautionStatusFilter.value = ui.cautionStatus;
+    els.clearCautionSearch.classList.toggle("is-visible", Boolean(ui.cautionQuery));
+
+    const list = getFilteredCautions();
+    if (!state.cautions.length) {
+      els.cautionGrid.innerHTML = `
+        <div class="mnemonic-empty">
+          <svg class="empty-art" viewBox="0 0 120 120" fill="none" aria-hidden="true">
+            <circle cx="60" cy="60" r="30" stroke="currentColor" stroke-width="1.5"></circle>
+            <path d="M60 45v20M60 74h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+          </svg>
+          <h3>还没有做题注意</h3>
+          <p>把容易看错的题干、单位、选项或时间分配，写成一条可以照着执行的提醒。</p>
+          <div class="empty-actions">
+            <button class="btn btn-primary" type="button" data-caution-action="new">
+              ${icon("plus")}新建第一条注意
+            </button>
+            <button class="btn" type="button" data-caution-action="load-demo">载入示例注意</button>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    if (!list.length) {
+      els.cautionGrid.innerHTML = `
+        <div class="mnemonic-empty">
+          <h3>没有符合条件的注意</h3>
+          <p>换个学科或状态，或清除搜索词再试。</p>
+          <button class="btn" type="button" data-caution-action="clear-filter">清除筛选</button>
+        </div>
+      `;
+      return;
+    }
+
+    els.cautionGrid.innerHTML = list
+      .map((caution) => {
+        const date = new Date(caution.updatedAt).toLocaleDateString("zh-CN");
+        return `
+          <article class="mnemonic-card caution-card ${caution.checked ? "is-checked" : ""}">
+            <div class="mnemonic-card-head">
+              <div class="caution-main">
+                <button
+                  class="caution-check ${caution.checked ? "checked" : ""}"
+                  type="button"
+                  data-caution-action="toggle"
+                  data-id="${escapeHtml(caution.id)}"
+                  aria-label="${caution.checked ? "标记为待注意" : "标记为已注意"}"
+                  aria-pressed="${caution.checked}"
+                  title="${caution.checked ? "标记为待注意" : "标记为已注意"}"
+                >${icon("check")}</button>
+                <div>
+                  <h3 class="mnemonic-title">${escapeHtml(caution.title)}</h3>
+                  <div class="mnemonic-meta">
+                    <span class="badge">${escapeHtml(caution.subject)}</span>
+                    ${caution.pinned ? `<span class="tag">置顶</span>` : ""}
+                    <span>${date}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="mnemonic-actions">
+                <button
+                  class="icon-btn ${caution.pinned ? "is-pinned" : ""}"
+                  type="button"
+                  data-caution-action="pin"
+                  data-id="${escapeHtml(caution.id)}"
+                  aria-label="${caution.pinned ? "取消置顶" : "置顶注意"}"
+                  title="${caution.pinned ? "取消置顶" : "置顶注意"}"
+                >${icon("pin")}</button>
+                <button
+                  class="icon-btn"
+                  type="button"
+                  data-caution-action="edit"
+                  data-id="${escapeHtml(caution.id)}"
+                  aria-label="编辑注意"
+                  title="编辑注意"
+                >${icon("edit")}</button>
+                <button
+                  class="icon-btn"
+                  type="button"
+                  data-caution-action="delete"
+                  data-id="${escapeHtml(caution.id)}"
+                  aria-label="删除注意"
+                  title="删除注意"
+                >${icon("trash")}</button>
+              </div>
+            </div>
+            <div class="mnemonic-content">${escapeHtml(caution.content)}</div>
+            ${
+              caution.tags.length
+                ? `<div class="mnemonic-tags">${caution.tags
+                    .map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`)
+                    .join("")}</div>`
+                : ""
+            }
+          </article>
+        `;
+      })
+      .join("");
+  }
+
+  function renderAll() {
+    const previousId = state.currentId;
+    const current = getCurrentQuestion();
+    if (current && state.currentId !== previousId) saveState();
+
+    renderView();
+    renderStats();
+    renderFilters();
+    renderSubjects();
+    renderList();
+    renderQuestion(current);
+    renderMnemonics();
+    renderCautions();
+    updateListMeta();
+
+    els.searchInput.disabled = state.questions.length === 0;
+    els.clearSearch.classList.toggle("is-visible", Boolean(state.query));
+  }
+
+  function renderStats() {
+    const total = state.questions.length;
+    const attempted = state.questions.filter((question) => question.attempts > 0).length;
+    const totalAttempts = state.questions.reduce((sum, question) => sum + question.attempts, 0);
+    const totalCorrect = state.questions.reduce((sum, question) => sum + question.correctCount, 0);
+    const due = state.questions.filter(
+      (question) => question.lastResult === "wrong" && !question.mastered,
+    ).length;
+    const mastered = state.questions.filter((question) => question.mastered).length;
+    const accuracy = totalAttempts > 0 ? Math.round((totalCorrect / totalAttempts) * 100) : null;
+
+    els.stats.innerHTML = `
+      <div class="stat">
+        <div class="stat-label">题库</div>
+        <div class="stat-value">${total}<small>题</small></div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">已练</div>
+        <div class="stat-value">${attempted}<small>题</small></div>
+        <div class="stat-note">至少作答一次</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">正确率</div>
+        <div class="stat-value">${accuracy === null ? "—" : accuracy}<small>${accuracy === null ? "" : "%"}</small></div>
+        <div class="stat-note">${totalAttempts > 0 ? `${totalCorrect} / ${totalAttempts} 次作答` : "完成答题后显示"}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">待复习</div>
+        <div class="stat-value">${due}<small>题</small></div>
+        <div class="stat-note">${mastered} 题已掌握</div>
+      </div>
+    `;
+  }
+
+  function renderFilters() {
+    const counts = {
+      all: state.questions.length,
+      new: state.questions.filter((question) => getStatus(question).key === "new").length,
+      wrong: state.questions.filter((question) => getStatus(question).key === "wrong").length,
+      mastered: state.questions.filter((question) => question.mastered).length,
+    };
+
+    els.filters.innerHTML = FILTERS.map(
+      (filter) => `
+        <button
+          class="chip ${state.filter === filter.key ? "active" : ""}"
+          type="button"
+          data-filter="${filter.key}"
+          aria-pressed="${state.filter === filter.key}"
+        >
+          ${filter.label}<span class="count">${counts[filter.key]}</span>
+        </button>
+      `,
+    ).join("");
+  }
+
+  function renderSubjects() {
+    const subjects = [...new Set(state.questions.map((question) => question.subject).filter(Boolean))].sort(
+      (a, b) => a.localeCompare(b, "zh-Hans-CN"),
+    );
+    if (state.subject !== "all" && !subjects.includes(state.subject)) {
+      state.subject = "all";
+    }
+    els.subjectFilter.innerHTML =
+      `<option value="all">全部学科</option>` +
+      subjects.map((subject) => `<option value="${escapeHtml(subject)}">${escapeHtml(subject)}</option>`).join("");
+    els.subjectFilter.value = state.subject;
+    els.subjectFilter.disabled = state.questions.length === 0;
+  }
+
+  function renderList() {
+    const list = getFiltered();
+    if (!state.questions.length) {
+      els.questionList.innerHTML = `<div class="list-empty">题库还是空的<br>导入后，题目会出现在这里。</div>`;
+      return;
+    }
+    if (!list.length) {
+      els.questionList.innerHTML = `<div class="list-empty">没有符合条件的题目<br>试试更换筛选条件或搜索词。</div>`;
+      return;
+    }
+
+    els.questionList.innerHTML = list
+      .map((question, index) => {
+        const status = getStatus(question);
+        const active = question.id === state.currentId;
+        return `
+          <button
+            class="q-item ${active ? "active" : ""}"
+            type="button"
+            data-id="${escapeHtml(question.id)}"
+            aria-current="${active ? "true" : "false"}"
+            title="${escapeHtml(question.stem)}"
+          >
+            <span class="status-dot ${status.key}" aria-hidden="true"></span>
+            <span class="q-item-body">
+              <span class="q-item-stem">${escapeHtml(truncate(question.stem, 82))}</span>
+              <span class="q-item-meta">
+                ${
+                  question.caseId
+                    ? `<span class="tag">病例</span><span>${escapeHtml(truncate(question.caseTitle || "病例题", 16))}</span><span>·</span>`
+                    : ""
+                }
+                <span>${escapeHtml(question.subject)}</span>
+                <span>·</span>
+                <span>${status.label}</span>
+              </span>
+            </span>
+            <span class="q-item-index">${String(index + 1).padStart(2, "0")}</span>
+          </button>
+        `;
+      })
+      .join("");
+  }
+
+  function updateListMeta() {
+    const list = getFiltered();
+    const filter = FILTERS.find((item) => item.key === state.filter) || FILTERS[0];
+    const subject = state.subject === "all" ? "" : ` · ${state.subject}`;
+    els.listLabel.textContent = `${filter.label}${subject}`;
+    els.listCount.textContent = `${list.length} / ${state.questions.length} 题`;
+  }
+
+  function emptyStateHTML(title, text, showDemo) {
+    const actions = showDemo
+      ? `
+        <button class="btn btn-primary" type="button" data-action="open-import">
+          ${icon("upload")}导入错题
+        </button>
+        <button class="btn" type="button" data-action="load-demo">载入示例</button>
+      `
+      : `
+        <button class="btn" type="button" data-action="clear-filters">清除筛选</button>
+      `;
+
+    return `
+      <div class="empty">
+        <svg class="empty-art" viewBox="0 0 120 120" fill="none" aria-hidden="true">
+          <rect x="27" y="17" width="66" height="86" rx="10" stroke="currentColor" stroke-width="1.5"></rect>
+          <path d="M41 39h38M41 53h38M41 67h23" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+          <path d="M78 17v18l-7-4-7 4V17" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"></path>
+          <circle cx="82" cy="82" r="16" fill="#ffffff" stroke="currentColor" stroke-width="1.5"></circle>
+          <path d="m75 82 5 5 9-10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+        <h2>${escapeHtml(title)}</h2>
+        <p>${escapeHtml(text)}</p>
+        <div class="empty-actions">${actions}</div>
+      </div>
+    `;
+  }
+
+  function renderQuestion(question) {
+    if (!state.questions.length) {
+      els.main.innerHTML = emptyStateHTML(
+        "还没有题目",
+        "导入你手头的错题，或先载入几道示例看看效果。",
+        true,
+      );
+      return;
+    }
+
+    if (!question) {
+      els.main.innerHTML = emptyStateHTML(
+        "没有符合条件的题目",
+        "换个筛选条件，或清除搜索词再试。",
+        false,
+      );
+      return;
+    }
+
+    const list = getFiltered();
+    const index = list.findIndex((item) => item.id === question.id);
+    const answerLetters = new Set(question.answer.split(""));
+    const selected = new Set(ui.selection);
+    const isMulti = question.answer.length > 1;
+    const isCorrect = ui.selection.slice().sort().join("") === question.answer;
+    const status = getStatus(question);
+    const noteStatus = ui.noteDirty ? "保存中…" : question.note ? "已保存" : "自动保存";
+
+    const optionsHTML = question.options
+      .map((option, optionIndex) => {
+        const key = option.key || letterAt(optionIndex);
+        const isSelected = selected.has(key);
+        const isCorrectOption = answerLetters.has(key);
+        let className = "option";
+        let mark = `<span class="option-mark"></span>`;
+
+        if (ui.revealed) {
+          if (isCorrectOption) {
+            className += " correct";
+            mark = icon("check", "option-mark");
+          } else if (isSelected) {
+            className += " wrong";
+            mark = icon("x", "option-mark");
+          }
+        } else if (isSelected) {
+          className += " selected";
+        }
+
+        return `
+          <button
+            class="${className}"
+            type="button"
+            data-key="${key}"
+            aria-pressed="${isSelected}"
+            ${ui.revealed ? "disabled" : ""}
+          >
+            <span class="option-key">${key}</span>
+            <span class="option-text">${escapeHtml(option.text)}</span>
+            ${mark}
+          </button>
+        `;
+      })
+      .join("");
+
+    const feedbackHTML = ui.revealed
+      ? `
+        <div class="feedback ${isCorrect ? "ok" : "bad"}" id="feedback" role="status">
+          <div class="feedback-head">
+            ${icon(isCorrect ? "check-circle" : "alert-circle")}
+            ${isCorrect ? "回答正确" : "回答错误"}
+          </div>
+          <div class="feedback-answer">
+            正确答案：<strong>${escapeHtml(question.answer || "未设置")}</strong>
+            ${ui.selection.length ? `　你的答案：<strong>${escapeHtml(ui.selection.join(""))}</strong>` : ""}
+          </div>
+          <div class="feedback-exp">${escapeHtml(question.explanation || "暂无解析。")}</div>
+        </div>
+      `
+      : `
+        <div class="feedback-hint" id="feedbackHint">
+          ${
+            question.answer
+              ? isMulti
+                ? "多选题：选择所有正确选项后提交。"
+                : "选择一个答案后提交。"
+              : "本题缺少标准答案，暂时无法判分。"
+          }
+        </div>
+      `;
+
+    const submitDisabled = !question.answer || ui.selection.length === 0;
+    const primaryAction = ui.revealed
+      ? `<button class="btn btn-primary" type="button" data-action="next">下一题 ${icon("arrow-right")}</button>
+         <button class="btn" type="button" data-action="retry">再做一次</button>`
+      : `<button class="btn btn-primary" type="button" data-action="submit" ${submitDisabled ? "disabled" : ""}>提交答案</button>
+         <span class="hint">${question.answer ? "答错会自动记录到待复习" : "请先补充标准答案"}</span>`;
+
+    const caseQuestions = question.caseId
+      ? state.questions
+          .filter((item) => item.caseId === question.caseId)
+          .sort((a, b) => a.caseOrder - b.caseOrder)
+      : [];
+    const caseIndex = Math.max(
+      0,
+      caseQuestions.findIndex((item) => item.id === question.id),
+    );
+    const caseTotal = caseQuestions.length || question.caseTotal || 0;
+    const caseHTML = question.caseId
+      ? `
+        <details class="case-panel" open>
+          <summary>
+            <span class="case-toggle">${icon("chevron-right")}</span>
+            <span class="badge badge-case">病例题</span>
+            <span class="case-title">${escapeHtml(question.caseTitle || "病例题")}</span>
+            <span class="case-progress">本病例第 ${caseIndex + 1}/${caseTotal} 问</span>
+          </summary>
+          <div class="case-text">${escapeHtml(question.caseText || "暂无病例描述")}</div>
+          <div class="case-actions">
+            <button class="btn" type="button" data-action="case-prev" ${caseIndex <= 0 ? "disabled" : ""}>上一问</button>
+            <button class="btn" type="button" data-action="case-next" ${caseIndex >= caseTotal - 1 ? "disabled" : ""}>下一问</button>
+          </div>
+        </details>
+      `
+      : "";
+
+    els.main.innerHTML = `
+      <div class="q-head">
+        <div class="q-index">第 <strong>${index + 1}</strong> 题 <span>/ 共 ${list.length} 题</span></div>
+        <div class="q-tools">
+          <span class="badge">${escapeHtml(question.subject)}</span>
+          ${isMulti ? `<span class="badge badge-multi">多选</span>` : ""}
+          <button
+            class="btn btn-small ${question.mastered ? "is-mastered" : ""}"
+            type="button"
+            data-action="master"
+          >
+            ${icon(question.mastered ? "check-circle" : "check")}
+            ${question.mastered ? "已掌握" : "标记掌握"}
+          </button>
+          <button class="icon-btn" type="button" data-action="edit-question" aria-label="编辑题目" title="编辑题目">
+            ${icon("edit")}
+          </button>
+          <button class="icon-btn" type="button" data-action="delete" aria-label="删除本题" title="删除本题">
+            ${icon("trash")}
+          </button>
+        </div>
+      </div>
+
+      ${caseHTML}
+      <h2 class="q-stem">${escapeHtml(question.stem)}</h2>
+      ${
+        question.tags.length
+          ? `<div class="q-tags">${question.tags
+              .map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`)
+              .join("")}</div>`
+          : ""
+      }
+
+      <div class="options" role="group" aria-label="选项">${optionsHTML}</div>
+
+      <div class="q-actions">
+        ${primaryAction}
+        <span class="spacer"></span>
+        <div class="nav-arrows">
+          <button class="icon-btn" type="button" data-action="prev" aria-label="上一题" title="上一题">
+            ${icon("chevron-left")}
+          </button>
+          <button class="icon-btn" type="button" data-action="next" aria-label="下一题" title="下一题">
+            ${icon("chevron-right")}
+          </button>
+        </div>
+      </div>
+
+      ${feedbackHTML}
+
+      <div class="note-block">
+        <div class="note-head">
+          <label class="note-label" for="noteInput">${icon("note")}我的笔记</label>
+          <div class="note-actions">
+            <button class="btn btn-small" type="button" data-action="make-mnemonic">
+              ${icon("plus")}记成口诀
+            </button>
+            <button class="btn btn-small" type="button" data-action="make-caution">
+              ${icon("alert-circle")}记成注意
+            </button>
+            <span class="note-status" id="noteStatus">${noteStatus}</span>
+          </div>
+        </div>
+        <textarea
+          class="note-area"
+          id="noteInput"
+          placeholder="写下易错点、记忆线索，或为什么选错…"
+        >${escapeHtml(question.note)}</textarea>
+        <div class="note-foot">
+          <span>只保存在本机浏览器</span>
+          <span id="noteCount">${question.note.length} 字</span>
+        </div>
+      </div>
+    `;
+
+    if (status.key === "mastered") {
+      els.main.dataset.status = "mastered";
+    } else {
+      delete els.main.dataset.status;
+    }
+  }
+
+  function selectQuestion(id) {
+    if (state.currentId !== id) {
+      state.currentId = id;
+      ui.selection = [];
+      ui.revealed = false;
+      saveState();
+    }
+    renderAll();
+
+    if (window.innerWidth <= 980) {
+      window.requestAnimationFrame(() => {
+        els.main.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  }
+
+  function navigate(delta) {
+    const list = getFiltered();
+    if (!list.length) return;
+    const currentIndex = list.findIndex((question) => question.id === state.currentId);
+    const nextIndex =
+      currentIndex === -1
+        ? delta > 0
+          ? 0
+          : list.length - 1
+        : (currentIndex + delta + list.length) % list.length;
+    selectQuestion(list[nextIndex].id);
+  }
+
+  function navigateCase(delta) {
+    const question = getCurrentQuestion();
+    if (!question || !question.caseId) return;
+    const caseQuestions = state.questions
+      .filter((item) => item.caseId === question.caseId)
+      .sort((a, b) => a.caseOrder - b.caseOrder);
+    const index = caseQuestions.findIndex((item) => item.id === question.id);
+    const target = caseQuestions[index + delta];
+    if (!target) return;
+
+    state.filter = "all";
+    state.subject = "all";
+    state.query = "";
+    els.searchInput.value = "";
+    selectQuestion(target.id);
+  }
+
+  function toggleOption(key) {
+    const question = getCurrentQuestion();
+    if (!question || ui.revealed) return;
+    if (!question.answer) {
+      toast("本题缺少标准答案，暂时不能作答", "error");
+      return;
+    }
+
+    if (question.answer.length > 1) {
+      if (ui.selection.includes(key)) {
+        ui.selection = ui.selection.filter((item) => item !== key);
+      } else {
+        ui.selection = [...ui.selection, key].sort();
+      }
+    } else {
+      ui.selection = [key];
+    }
+
+    renderQuestion(question);
+    els.liveRegion.textContent = ui.selection.length
+      ? `已选择 ${ui.selection.join("")}`
+      : "已取消选择";
+
+    window.requestAnimationFrame(() => {
+      const option = els.main.querySelector(`.option[data-key="${key}"]`);
+      if (option) option.focus({ preventScroll: true });
+    });
+  }
+
+  function submitAnswer() {
+    if (ui.revealed) return;
+    const question = getCurrentQuestion();
+    if (!question) return;
+    if (!question.answer) {
+      toast("本题缺少标准答案，暂时不能判分", "error");
+      return;
+    }
+    if (!ui.selection.length) {
+      toast("请先选择答案");
+      return;
+    }
+
+    const selected = ui.selection.slice().sort().join("");
+    const correct = selected === question.answer;
+    question.attempts += 1;
+    question.correctCount += correct ? 1 : 0;
+    question.lastResult = correct ? "correct" : "wrong";
+    question.updatedAt = Date.now();
+    ui.revealed = true;
+    saveState();
+    renderAll();
+    els.liveRegion.textContent = correct
+      ? "回答正确"
+      : `回答错误，正确答案是 ${question.answer}`;
+  }
+
+  function retryQuestion() {
+    const question = getCurrentQuestion();
+    if (!question) return;
+    ui.selection = [];
+    ui.revealed = false;
+    renderQuestion(question);
+    window.requestAnimationFrame(() => {
+      const firstOption = els.main.querySelector(".option");
+      if (firstOption) firstOption.focus({ preventScroll: true });
+    });
+  }
+
+  function toggleMastered() {
+    const question = getCurrentQuestion();
+    if (!question) return;
+    question.mastered = !question.mastered;
+    question.updatedAt = Date.now();
+    saveState();
+    renderAll();
+    toast(question.mastered ? "已标记为掌握" : "已取消掌握");
+  }
+
+  function deleteQuestion() {
+    const question = getCurrentQuestion();
+    if (!question) return;
+    if (!window.confirm("确定删除这道题吗？笔记和作答记录也会一起删除。")) return;
+
+    state.questions = state.questions.filter((item) => item.id !== question.id);
+    state.currentId = null;
+    ui.selection = [];
+    ui.revealed = false;
+    markContentChange(1);
+    saveState();
+    renderAll();
+    toast("已删除题目");
+  }
+
+  function clearFilters() {
+    state.filter = "all";
+    state.subject = "all";
+    state.query = "";
+    els.searchInput.value = "";
+    renderAll();
+  }
+
+  function addQuestions(items) {
+    const added = [];
+
+    for (const item of items) {
+      if (!item || !String(item.stem || "").trim()) continue;
+      const question = {
+        ...item,
+        id: uid(),
+        createdAt: Number(item.createdAt) || Date.now(),
+        updatedAt: Date.now(),
+      };
+      state.questions.push(question);
+      added.push(question);
+    }
+
+    if (added.length) {
+      state.currentId = added[0].id;
+      ui.selection = [];
+      ui.revealed = false;
+      markContentChange(added.length);
+      saveState();
+      renderAll();
+    }
+
+    return { added: added.length, firstId: added[0] ? added[0].id : null };
+  }
+
+  function loadDemo() {
+    const items = DEMO_QUESTIONS.map((item) => normalizeImportedQuestion(item));
+    const result = addQuestions(items);
+    if (!result.added) {
+      toast("示例题目已经在题库中了");
+      return;
+    }
+    toast(`已载入 ${result.added} 道示例题`);
+  }
+
+  function openMnemonicModal(mnemonic = null, preset = {}) {
+    if (ui.modalOpen) return;
+    ui.modalOpen = true;
+    ui.lastFocus = document.activeElement;
+    ui.editingMnemonicId = mnemonic ? mnemonic.id : null;
+
+    const title = mnemonic ? mnemonic.title : preset.title || "";
+    const content = mnemonic ? mnemonic.content : preset.content || "";
+    const subject = mnemonic ? mnemonic.subject : preset.subject || "未分类";
+    const tags = mnemonic ? mnemonic.tags.join(", ") : (preset.tags || []).join(", ");
+    const pinned = mnemonic ? mnemonic.pinned : false;
+    const subjects = [
+      ...new Set([
+        ...state.questions.map((item) => item.subject),
+        ...state.mnemonics.map((item) => item.subject),
+      ]),
+    ].sort((a, b) => a.localeCompare(b, "zh-Hans-CN"));
+
+    els.modalRoot.innerHTML = `
+      <div class="modal-overlay" id="mnemonicModal">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mnemonicModalTitle">
+          <div class="modal-head">
+            <div>
+              <h2 id="mnemonicModalTitle">${mnemonic ? "编辑口诀" : "新建口诀"}</h2>
+              <p class="modal-sub">用自己的话写，越短越好记。</p>
+            </div>
+            <button class="icon-btn" type="button" id="closeMnemonic" aria-label="关闭口诀窗口" title="关闭">
+              ${icon("close")}
+            </button>
+          </div>
+
+          <form id="mnemonicForm">
+            <div class="form-grid">
+              <label class="field">
+                <span>标题</span>
+                <input class="text-input" id="mnemonicTitleInput" maxlength="60" required
+                       value="${escapeHtml(title)}" placeholder="如：心衰新四联">
+              </label>
+              <label class="field">
+                <span>学科</span>
+                <input class="text-input" id="mnemonicSubjectInput" list="mnemonicSubjects"
+                       value="${escapeHtml(subject)}" placeholder="如：内科学">
+              </label>
+            </div>
+            <datalist id="mnemonicSubjects">
+              ${subjects.map((item) => `<option value="${escapeHtml(item)}"></option>`).join("")}
+            </datalist>
+
+            <label class="field">
+              <span>口诀内容</span>
+              <textarea class="note-area" id="mnemonicContentInput" required
+                        placeholder="把机制、分型或治疗顺序压缩成自己的记忆线索…">${escapeHtml(content)}</textarea>
+            </label>
+
+            <label class="field">
+              <span>标签</span>
+              <input class="text-input" id="mnemonicTagsInput"
+                     value="${escapeHtml(tags)}" placeholder="用逗号分隔，如：心衰, 指南">
+            </label>
+
+            <label class="check-row">
+              <input type="checkbox" id="mnemonicPinnedInput" ${pinned ? "checked" : ""}>
+              置顶显示
+            </label>
+
+            <div class="modal-foot">
+              <span class="spacer"></span>
+              <button class="btn" type="button" id="cancelMnemonic">取消</button>
+              <button class="btn btn-primary" type="submit">${mnemonic ? "保存修改" : "保存口诀"}</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+    document.body.classList.add("modal-open");
+    document.getElementById("closeMnemonic").addEventListener("click", closeMnemonicModal);
+    document.getElementById("cancelMnemonic").addEventListener("click", closeMnemonicModal);
+    document.getElementById("mnemonicForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      saveMnemonic();
+    });
+    document.getElementById("mnemonicContentInput").addEventListener("keydown", (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+        event.preventDefault();
+        saveMnemonic();
+      }
+    });
+    document.getElementById("mnemonicModal").addEventListener("click", (event) => {
+      if (event.target.id === "mnemonicModal") closeMnemonicModal();
+    });
+    document.addEventListener("keydown", handleMnemonicModalKeydown);
+    window.requestAnimationFrame(() => {
+      const input = document.getElementById("mnemonicTitleInput");
+      if (input) input.focus();
+    });
+  }
+
+  function closeMnemonicModal() {
+    if (!ui.modalOpen) return;
+    ui.modalOpen = false;
+    ui.editingMnemonicId = null;
+    els.modalRoot.innerHTML = "";
+    document.body.classList.remove("modal-open");
+    document.removeEventListener("keydown", handleMnemonicModalKeydown);
+    if (ui.lastFocus && ui.lastFocus.isConnected) {
+      ui.lastFocus.focus({ preventScroll: true });
+    }
+    ui.lastFocus = null;
+  }
+
+  function handleMnemonicModalKeydown(event) {
+    if (!ui.modalOpen) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeMnemonicModal();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const modal = document.querySelector("#mnemonicModal .modal");
+    if (!modal) return;
+    const focusables = [
+      ...modal.querySelectorAll(
+        'button, [href], input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"])',
+      ),
+    ].filter((element) => !element.disabled && element.offsetParent !== null);
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  function saveMnemonic() {
+    const title = document.getElementById("mnemonicTitleInput")?.value.trim() || "";
+    const content = document.getElementById("mnemonicContentInput")?.value.trim() || "";
+    if (!title) {
+      toast("请填写口诀标题");
+      document.getElementById("mnemonicTitleInput")?.focus();
+      return;
+    }
+    if (!content) {
+      toast("请填写口诀内容");
+      document.getElementById("mnemonicContentInput")?.focus();
+      return;
+    }
+
+    const subject =
+      document.getElementById("mnemonicSubjectInput")?.value.trim() || "未分类";
+    const tags = (document.getElementById("mnemonicTagsInput")?.value || "")
+      .split(/[,，、;；]/)
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+    const pinned = Boolean(document.getElementById("mnemonicPinnedInput")?.checked);
+    const now = Date.now();
+    const isEditing = Boolean(ui.editingMnemonicId);
+
+    if (ui.editingMnemonicId) {
+      const target = state.mnemonics.find((item) => item.id === ui.editingMnemonicId);
+      if (target) {
+        Object.assign(target, {
+          title,
+          content,
+          subject,
+          tags: [...new Set(tags)].slice(0, 6),
+          pinned,
+          updatedAt: now,
+        });
+      }
+    } else {
+      state.mnemonics.push({
+        id: uid(),
+        title,
+        content,
+        subject,
+        tags: [...new Set(tags)].slice(0, 6),
+        pinned,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    markContentChange(1);
+    saveState();
+    closeMnemonicModal();
+    renderAll();
+    toast(isEditing ? "口诀已更新" : "口诀已保存");
+  }
+
+  function deleteMnemonic(id) {
+    const target = state.mnemonics.find((item) => item.id === id);
+    if (!target) return;
+    if (!window.confirm(`确定删除口诀“${target.title}”吗？`)) return;
+    state.mnemonics = state.mnemonics.filter((item) => item.id !== id);
+    markContentChange(1);
+    saveState();
+    renderAll();
+    toast("已删除口诀");
+  }
+
+  function toggleMnemonicPin(id) {
+    const target = state.mnemonics.find((item) => item.id === id);
+    if (!target) return;
+    target.pinned = !target.pinned;
+    target.updatedAt = Date.now();
+    saveState();
+    renderAll();
+    toast(target.pinned ? "已置顶" : "已取消置顶");
+  }
+
+  function makeMnemonicFromQuestion() {
+    const question = getCurrentQuestion();
+    if (!question) return;
+    openMnemonicModal(null, {
+      title: truncate(question.stem, 28),
+      subject: question.subject,
+      tags: question.tags,
+    });
+  }
+
+  function openCautionModal(caution = null, preset = {}) {
+    if (ui.modalOpen) return;
+    ui.modalOpen = true;
+    ui.lastFocus = document.activeElement;
+    ui.editingCautionId = caution ? caution.id : null;
+
+    const title = caution ? caution.title : preset.title || "";
+    const content = caution ? caution.content : preset.content || "";
+    const subject = caution ? caution.subject : preset.subject || "通用";
+    const tags = caution ? caution.tags.join(", ") : (preset.tags || []).join(", ");
+    const pinned = caution ? caution.pinned : false;
+    const checked = caution ? caution.checked : false;
+    const subjects = [
+      ...new Set([
+        ...state.questions.map((item) => item.subject),
+        ...state.cautions.map((item) => item.subject),
+      ]),
+    ].sort((a, b) => a.localeCompare(b, "zh-Hans-CN"));
+
+    els.modalRoot.innerHTML = `
+      <div class="modal-overlay" id="cautionModal">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cautionModalTitle">
+          <div class="modal-head">
+            <div>
+              <h2 id="cautionModalTitle">${caution ? "编辑注意" : "新建注意"}</h2>
+              <p class="modal-sub">写成一条能照着执行的提醒。</p>
+            </div>
+            <button class="icon-btn" type="button" id="closeCaution" aria-label="关闭注意窗口" title="关闭">
+              ${icon("close")}
+            </button>
+          </div>
+
+          <form id="cautionForm">
+            <div class="form-grid">
+              <label class="field">
+                <span>标题</span>
+                <input class="text-input" id="cautionTitleInput" maxlength="60" required
+                       value="${escapeHtml(title)}" placeholder="如：先看问的是正确还是错误">
+              </label>
+              <label class="field">
+                <span>学科 / 场景</span>
+                <input class="text-input" id="cautionSubjectInput" list="cautionSubjects"
+                       value="${escapeHtml(subject)}" placeholder="如：通用、内科学">
+              </label>
+            </div>
+            <datalist id="cautionSubjects">
+              ${subjects.map((item) => `<option value="${escapeHtml(item)}"></option>`).join("")}
+            </datalist>
+
+            <label class="field">
+              <span>注意内容</span>
+              <textarea class="note-area" id="cautionContentInput" required
+                        placeholder="例如：先扫最后一句；问“错误的是”时不要条件反射选正确项。">${escapeHtml(content)}</textarea>
+            </label>
+
+            <label class="field">
+              <span>标签</span>
+              <input class="text-input" id="cautionTagsInput"
+                     value="${escapeHtml(tags)}" placeholder="用逗号分隔，如：审题, X型题">
+            </label>
+
+            <div class="radio-row">
+              <label class="check-row">
+                <input type="checkbox" id="cautionPinnedInput" ${pinned ? "checked" : ""}>
+                置顶显示
+              </label>
+              <label class="check-row">
+                <input type="checkbox" id="cautionCheckedInput" ${checked ? "checked" : ""}>
+                已注意
+              </label>
+            </div>
+
+            <div class="modal-foot">
+              <span class="spacer"></span>
+              <button class="btn" type="button" id="cancelCaution">取消</button>
+              <button class="btn btn-primary" type="submit">${caution ? "保存修改" : "保存注意"}</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+    document.body.classList.add("modal-open");
+    document.getElementById("closeCaution").addEventListener("click", closeCautionModal);
+    document.getElementById("cancelCaution").addEventListener("click", closeCautionModal);
+    document.getElementById("cautionForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      saveCaution();
+    });
+    document.getElementById("cautionContentInput").addEventListener("keydown", (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+        event.preventDefault();
+        saveCaution();
+      }
+    });
+    document.getElementById("cautionModal").addEventListener("click", (event) => {
+      if (event.target.id === "cautionModal") closeCautionModal();
+    });
+    document.addEventListener("keydown", handleCautionModalKeydown);
+    window.requestAnimationFrame(() => {
+      const input = document.getElementById("cautionTitleInput");
+      if (input) input.focus();
+    });
+  }
+
+  function closeCautionModal() {
+    if (!ui.modalOpen) return;
+    ui.modalOpen = false;
+    ui.editingCautionId = null;
+    els.modalRoot.innerHTML = "";
+    document.body.classList.remove("modal-open");
+    document.removeEventListener("keydown", handleCautionModalKeydown);
+    if (ui.lastFocus && ui.lastFocus.isConnected) {
+      ui.lastFocus.focus({ preventScroll: true });
+    }
+    ui.lastFocus = null;
+  }
+
+  function handleCautionModalKeydown(event) {
+    if (!ui.modalOpen) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeCautionModal();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const modal = document.querySelector("#cautionModal .modal");
+    if (!modal) return;
+    const focusables = [
+      ...modal.querySelectorAll(
+        'button, [href], input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"])',
+      ),
+    ].filter((element) => !element.disabled && element.offsetParent !== null);
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  function saveCaution() {
+    const title = document.getElementById("cautionTitleInput")?.value.trim() || "";
+    const content = document.getElementById("cautionContentInput")?.value.trim() || "";
+    if (!title) {
+      toast("请填写注意标题");
+      document.getElementById("cautionTitleInput")?.focus();
+      return;
+    }
+    if (!content) {
+      toast("请填写注意内容");
+      document.getElementById("cautionContentInput")?.focus();
+      return;
+    }
+
+    const subject =
+      document.getElementById("cautionSubjectInput")?.value.trim() || "通用";
+    const tags = (document.getElementById("cautionTagsInput")?.value || "")
+      .split(/[,，、;；]/)
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+    const pinned = Boolean(document.getElementById("cautionPinnedInput")?.checked);
+    const checked = Boolean(document.getElementById("cautionCheckedInput")?.checked);
+    const now = Date.now();
+    const isEditing = Boolean(ui.editingCautionId);
+
+    if (isEditing) {
+      const target = state.cautions.find((item) => item.id === ui.editingCautionId);
+      if (target) {
+        Object.assign(target, {
+          title,
+          content,
+          subject,
+          tags: [...new Set(tags)].slice(0, 6),
+          pinned,
+          checked,
+          updatedAt: now,
+        });
+      }
+    } else {
+      state.cautions.push({
+        id: uid(),
+        title,
+        content,
+        subject,
+        tags: [...new Set(tags)].slice(0, 6),
+        pinned,
+        checked,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    markContentChange(1);
+    saveState();
+    closeCautionModal();
+    renderAll();
+    toast(isEditing ? "注意已更新" : "注意已保存");
+  }
+
+  function deleteCaution(id) {
+    const target = state.cautions.find((item) => item.id === id);
+    if (!target) return;
+    if (!window.confirm(`确定删除注意“${target.title}”吗？`)) return;
+    state.cautions = state.cautions.filter((item) => item.id !== id);
+    markContentChange(1);
+    saveState();
+    renderAll();
+    toast("已删除注意");
+  }
+
+  function toggleCautionPin(id) {
+    const target = state.cautions.find((item) => item.id === id);
+    if (!target) return;
+    target.pinned = !target.pinned;
+    target.updatedAt = Date.now();
+    markContentChange(added);
+    saveState();
+    renderAll();
+    toast(target.pinned ? "已置顶" : "已取消置顶");
+  }
+
+  function toggleCautionChecked(id) {
+    const target = state.cautions.find((item) => item.id === id);
+    if (!target) return;
+    target.checked = !target.checked;
+    target.updatedAt = Date.now();
+    saveState();
+    renderAll();
+    toast(target.checked ? "已标记为注意" : "已标记为待注意");
+  }
+
+  function makeCautionFromQuestion() {
+    const question = getCurrentQuestion();
+    if (!question) return;
+    openCautionModal(null, {
+      title: truncate(question.stem, 28),
+      subject: question.subject,
+      tags: question.tags,
+    });
+  }
+
+  function loadDemoCautions() {
+    const existing = new Set(
+      state.cautions.map((item) => normalizeStem(`${item.title}|${item.content}`)),
+    );
+    let added = 0;
+    for (const demo of DEMO_CAUTIONS) {
+      const caution = normalizeCaution(demo);
+      if (!caution) continue;
+      const key = normalizeStem(`${caution.title}|${caution.content}`);
+      if (existing.has(key)) continue;
+      existing.add(key);
+      state.cautions.push({
+        ...caution,
+        id: uid(),
+        checked: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      added += 1;
+    }
+    if (!added) {
+      toast("示例注意已经存在");
+      return;
+    }
+    markContentChange(added);
+    saveState();
+    renderAll();
+    toast(`已载入 ${added} 条示例注意`);
+  }
+
+  function addEditorOptionRow(text = "", correct = false) {
+    const container = document.getElementById("editOptions");
+    if (!container) return;
+    if (container.querySelectorAll(".edit-option-row").length >= 6) {
+      toast("最多支持 6 个选项");
+      return;
+    }
+    const row = document.createElement("div");
+    row.className = "edit-option-row";
+    row.innerHTML = `
+      <span class="option-key"></span>
+      <input class="text-input edit-option-text" placeholder="选项内容">
+      <label class="correct-toggle">
+        <input type="checkbox" class="edit-option-correct">
+        正确
+      </label>
+      <button class="icon-btn edit-option-remove" type="button" aria-label="删除选项" title="删除选项">
+        ${icon("x")}
+      </button>
+    `;
+    row.querySelector(".edit-option-text").value = text;
+    row.querySelector(".edit-option-correct").checked = correct;
+    container.appendChild(row);
+    refreshEditorOptionLabels();
+  }
+
+  function refreshEditorOptionLabels() {
+    document.querySelectorAll("#editOptions .edit-option-row").forEach((row, index) => {
+      const label = row.querySelector(".option-key");
+      if (label) label.textContent = letterAt(index);
+    });
+  }
+
+  function openQuestionEditor() {
+    const question = getCurrentQuestion();
+    if (!question || ui.modalOpen) return;
+    ui.modalOpen = true;
+    ui.lastFocus = document.activeElement;
+    ui.editingQuestionId = question.id;
+    const isCase = Boolean(question.caseId);
+    const subjects = [
+      ...new Set(state.questions.map((item) => item.subject).filter(Boolean)),
+    ].sort((a, b) => a.localeCompare(b, "zh-Hans-CN"));
+    const optionRows = question.options
+      .map((option, index) => {
+        const key = letterAt(index);
+        const correct = question.answer.includes(key);
+        return `
+          <div class="edit-option-row">
+            <span class="option-key">${key}</span>
+            <input class="text-input edit-option-text" value="${escapeHtml(option.text)}" placeholder="选项内容">
+            <label class="correct-toggle">
+              <input type="checkbox" class="edit-option-correct" ${correct ? "checked" : ""}>
+              正确
+            </label>
+            <button class="icon-btn edit-option-remove" type="button" aria-label="删除选项" title="删除选项">
+              ${icon("x")}
+            </button>
+          </div>
+        `;
+      })
+      .join("");
+
+    els.modalRoot.innerHTML = `
+      <div class="modal-overlay" id="questionEditorModal">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="questionEditorTitle">
+          <div class="modal-head">
+            <div>
+              <h2 id="questionEditorTitle">编辑题目</h2>
+              <p class="modal-sub">修改题干、选项、答案和解析；作答记录和笔记会保留。</p>
+            </div>
+            <button class="icon-btn" type="button" id="closeQuestionEditor" aria-label="关闭编辑窗口" title="关闭">
+              ${icon("close")}
+            </button>
+          </div>
+
+          <form id="questionEditorForm">
+            <label class="field">
+              <span>题干</span>
+              <textarea class="note-area" id="editStem" required placeholder="输入题干">${escapeHtml(question.stem)}</textarea>
+            </label>
+
+            ${
+              isCase
+                ? `
+                  <div class="case-edit-fields">
+                    <label class="field">
+                      <span>病例标题</span>
+                      <input class="text-input" id="editCaseTitle" value="${escapeHtml(question.caseTitle || "病例题")}">
+                    </label>
+                    <label class="field">
+                      <span>病例描述</span>
+                      <textarea class="note-area" id="editCaseText" required>${escapeHtml(question.caseText || "")}</textarea>
+                    </label>
+                    <p class="editor-hint">修改病例标题或描述，会同步到本病例的所有小问。</p>
+                  </div>
+                `
+                : ""
+            }
+
+            <div class="field">
+              <span>选项与正确答案</span>
+              <div class="edit-options" id="editOptions">${optionRows}</div>
+              <button class="btn btn-small" type="button" id="addOptionBtn">
+                ${icon("plus")}添加选项
+              </button>
+              <p class="editor-hint">单选只勾一个“正确”，多选可以勾多个。</p>
+            </div>
+
+            <label class="field">
+              <span>解析</span>
+              <textarea class="note-area" id="editExplanation" placeholder="输入解析">${escapeHtml(question.explanation || "")}</textarea>
+            </label>
+
+            <div class="form-grid">
+              <label class="field">
+                <span>学科</span>
+                <input class="text-input" id="editSubject" list="editSubjects" value="${escapeHtml(question.subject)}">
+              </label>
+              <label class="field">
+                <span>标签</span>
+                <input class="text-input" id="editTags" value="${escapeHtml(question.tags.join(", "))}" placeholder="用逗号分隔">
+              </label>
+            </div>
+            <datalist id="editSubjects">
+              ${subjects.map((item) => `<option value="${escapeHtml(item)}"></option>`).join("")}
+            </datalist>
+
+            <div class="modal-foot">
+              <span class="spacer"></span>
+              <button class="btn" type="button" id="cancelQuestionEditor">取消</button>
+              <button class="btn btn-primary" type="submit">保存修改</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+    document.body.classList.add("modal-open");
+
+    const close = () => closeQuestionEditor();
+    document.getElementById("closeQuestionEditor").addEventListener("click", close);
+    document.getElementById("cancelQuestionEditor").addEventListener("click", close);
+    document.getElementById("questionEditorModal").addEventListener("click", (event) => {
+      if (event.target.id === "questionEditorModal") close();
+    });
+    document.getElementById("addOptionBtn").addEventListener("click", () => addEditorOptionRow());
+    document.getElementById("editOptions").addEventListener("click", (event) => {
+      const remove = event.target.closest(".edit-option-remove");
+      if (!remove) return;
+      const rows = document.querySelectorAll("#editOptions .edit-option-row");
+      if (rows.length <= 2) {
+        toast("至少保留两个选项");
+        return;
+      }
+      remove.closest(".edit-option-row").remove();
+      refreshEditorOptionLabels();
+    });
+    document.getElementById("questionEditorForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      saveQuestionEditor();
+    });
+    document.addEventListener("keydown", handleQuestionEditorKeydown);
+    window.requestAnimationFrame(() => {
+      const input = document.getElementById("editStem");
+      if (input) input.focus();
+    });
+  }
+
+  function closeQuestionEditor() {
+    if (!ui.modalOpen) return;
+    ui.modalOpen = false;
+    ui.editingQuestionId = null;
+    els.modalRoot.innerHTML = "";
+    document.body.classList.remove("modal-open");
+    document.removeEventListener("keydown", handleQuestionEditorKeydown);
+    if (ui.lastFocus && ui.lastFocus.isConnected) {
+      ui.lastFocus.focus({ preventScroll: true });
+    }
+    ui.lastFocus = null;
+  }
+
+  function handleQuestionEditorKeydown(event) {
+    if (!ui.modalOpen) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeQuestionEditor();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const modal = document.querySelector("#questionEditorModal .modal");
+    if (!modal) return;
+    const focusables = [
+      ...modal.querySelectorAll(
+        'button, [href], input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"])',
+      ),
+    ].filter((element) => !element.disabled && element.offsetParent !== null);
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  function saveQuestionEditor() {
+    const question = state.questions.find((item) => item.id === ui.editingQuestionId);
+    if (!question) return;
+    const stem = document.getElementById("editStem")?.value.trim() || "";
+    if (!stem) {
+      toast("题干不能为空");
+      document.getElementById("editStem")?.focus();
+      return;
+    }
+
+    const rows = [...document.querySelectorAll("#editOptions .edit-option-row")];
+    const options = [];
+    const answer = [];
+    rows.forEach((row) => {
+      const text = row.querySelector(".edit-option-text")?.value.trim() || "";
+      if (!text) return;
+      const key = letterAt(options.length);
+      options.push({ key, text });
+      if (row.querySelector(".edit-option-correct")?.checked) answer.push(key);
+    });
+    if (options.length < 2) {
+      toast("至少需要两个有效选项");
+      return;
+    }
+    if (!answer.length) {
+      toast("请至少勾选一个正确选项");
+      return;
+    }
+
+    const isCase = Boolean(question.caseId);
+    const caseTitle = isCase
+      ? document.getElementById("editCaseTitle")?.value.trim() || "病例题"
+      : question.caseTitle;
+    const caseText = isCase
+      ? document.getElementById("editCaseText")?.value.trim() || ""
+      : question.caseText;
+    if (isCase && !caseText) {
+      toast("病例描述不能为空");
+      document.getElementById("editCaseText")?.focus();
+      return;
+    }
+
+    const tags = (document.getElementById("editTags")?.value || "")
+      .split(/[,，、;；]/)
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+    const now = Date.now();
+    Object.assign(question, {
+      stem,
+      options,
+      answer: answer.sort().join(""),
+      explanation: document.getElementById("editExplanation")?.value.trim() || "",
+      subject: document.getElementById("editSubject")?.value.trim() || "未分类",
+      tags: [...new Set(tags)].slice(0, 6),
+      updatedAt: now,
+    });
+
+    if (isCase) {
+      state.questions
+        .filter((item) => item.caseId === question.caseId)
+        .forEach((item) => {
+          item.caseTitle = caseTitle;
+          item.caseText = caseText;
+        });
+    }
+
+    ui.selection = [];
+    ui.revealed = false;
+    markContentChange(1);
+    saveState();
+    closeQuestionEditor();
+    renderAll();
+    toast("题目已更新");
+  }
+
+  function exportData() {
+    if (!state.questions.length && !state.mnemonics.length && !state.cautions.length) {
+      toast("还没有可备份的内容");
+      return;
+    }
+
+    const payload = {
+      app: "cuotiben",
+      version: 3,
+      exportedAt: new Date().toISOString(),
+      questions: state.questions,
+      mnemonics: state.mnemonics,
+      cautions: state.cautions,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const date = new Date();
+    const stamp = `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(
+      date.getDate(),
+    ).padStart(2, "0")}`;
+    link.href = url;
+    link.download = `错题本备份-${stamp}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast("备份已导出");
+  }
+
+  function parseBackup(text) {
+    let data;
+    try {
+      data = JSON.parse(String(text ?? ""));
+    } catch (error) {
+      throw new Error("JSON 解析失败，请确认选择的是本页面导出的备份文件。");
+    }
+
+    if (Array.isArray(data)) {
+      data = { questions: data, mnemonics: [] };
+    }
+    if (!data || typeof data !== "object" || !Array.isArray(data.questions)) {
+      throw new Error("备份格式不正确，缺少 questions 题库数据。");
+    }
+
+    const questions = [];
+    const mnemonics = [];
+    const cautions = [];
+    const errors = [];
+    data.questions.forEach((raw, index) => {
+      try {
+        questions.push(normalizeImportedQuestion(raw));
+      } catch (error) {
+        errors.push(`题目 ${index + 1}：${error.message}`);
+      }
+    });
+    (Array.isArray(data.mnemonics) ? data.mnemonics : []).forEach((raw, index) => {
+      const mnemonic = normalizeMnemonic(raw);
+      if (mnemonic) mnemonics.push(mnemonic);
+      else errors.push(`口诀 ${index + 1}：缺少标题或内容`);
+    });
+    (Array.isArray(data.cautions) ? data.cautions : []).forEach((raw, index) => {
+      const caution = normalizeCaution(raw);
+      if (caution) cautions.push(caution);
+      else errors.push(`注意 ${index + 1}：缺少标题或内容`);
+    });
+
+    if (!questions.length && !mnemonics.length && !cautions.length) {
+      throw new Error("备份中没有可恢复的题目、口诀或做题注意。");
+    }
+
+    return {
+      questions,
+      mnemonics,
+      cautions,
+      exportedAt: typeof data.exportedAt === "string" ? data.exportedAt : null,
+      errors,
+    };
+  }
+
+  function openBackupModal() {
+    if (ui.modalOpen) return;
+    ui.modalOpen = true;
+    ui.lastFocus = document.activeElement;
+    ui.backupPreview = null;
+
+    els.modalRoot.innerHTML = `
+      <div class="modal-overlay" id="backupModal">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="backupModalTitle">
+          <div class="modal-head">
+            <div>
+              <h2 id="backupModalTitle">备份与恢复</h2>
+              <p class="modal-sub">备份包含题库、答题记录、笔记、口诀和做题注意。</p>
+            </div>
+            <button class="icon-btn" type="button" id="closeBackup" aria-label="关闭备份窗口" title="关闭">
+              ${icon("close")}
+            </button>
+          </div>
+
+          <div class="backup-section">
+            <h3>导出备份</h3>
+            <p>下载一个 JSON 文件，保存到网盘或发给自己。</p>
+            <button class="btn btn-primary" type="button" id="downloadBackupBtn">
+              ${icon("download")}下载 JSON 备份
+            </button>
+          </div>
+
+          <div class="backup-section">
+            <h3>浏览器自动备份</h3>
+            <p>每新增或修改 5 次内容自动备份一次，最多保留最近 ${AUTO_BACKUP_LIMIT} 份；只存在当前浏览器，清理浏览器数据会一起删除。</p>
+            <label class="check-row">
+              <input type="checkbox" id="autoBackupToggle" ${state.settings.autoBackup ? "checked" : ""}>
+              开启自动备份
+            </label>
+            <button class="btn btn-small" type="button" id="manualBackupBtn">立即备份</button>
+            <div class="auto-backup-progress" id="autoBackupProgress"></div>
+            <div class="auto-backup-list" id="autoBackupList"></div>
+          </div>
+
+          <div class="backup-section">
+            <h3>恢复备份</h3>
+            <p>选择之前导出的 JSON，先检查内容，再决定合并还是覆盖。</p>
+
+            <div class="dropzone" id="backupDropzone" role="button" tabindex="0" aria-label="选择备份文件">
+              ${icon("file")}
+              <strong>拖入备份文件，或点击选择</strong>
+              <span>只支持本页面导出的 JSON 备份</span>
+              <div class="file-name" id="backupFileName"></div>
+            </div>
+            <input type="file" id="backupFileInput" accept=".json,application/json" hidden>
+
+            <div class="divider">或粘贴备份内容</div>
+            <label class="sr-only" for="backupText">粘贴备份 JSON</label>
+            <textarea class="import-area" id="backupText" placeholder="粘贴备份 JSON…"></textarea>
+
+            <div class="radio-row">
+              <label class="radio-card">
+                <input type="radio" name="restoreMode" value="merge" checked>
+                <span>
+                  <strong>合并恢复</strong>
+                  <span>保留现有内容，并追加备份中的题目、口诀和注意；允许保留重复题目。</span>
+                </span>
+              </label>
+              <label class="radio-card">
+                <input type="radio" name="restoreMode" value="overwrite">
+                <span>
+                  <strong>覆盖恢复</strong>
+                  <span>用备份替换当前题库和口诀，适合换设备或恢复旧版本。</span>
+                </span>
+              </label>
+            </div>
+
+            <div class="backup-summary" id="backupSummary" hidden></div>
+            <div class="modal-foot">
+              <span class="spacer"></span>
+              <button class="btn" type="button" id="previewBackupBtn">检查备份</button>
+              <button class="btn btn-primary" type="button" id="restoreBackupBtn" disabled>恢复题库</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.classList.add("modal-open");
+
+    const close = () => closeBackupModal();
+    document.getElementById("closeBackup").addEventListener("click", close);
+    document.getElementById("downloadBackupBtn").addEventListener("click", exportData);
+    document.getElementById("autoBackupToggle").addEventListener("change", (event) => {
+      state.settings.autoBackup = event.target.checked;
+      state.settings.autoBackupCounter = 0;
+      saveState();
+      if (state.settings.autoBackup) {
+        createAutoBackup("manual", true);
+        renderAutoBackupList();
+      }
+      toast(state.settings.autoBackup ? "已开启自动备份" : "已关闭自动备份");
+    });
+    document.getElementById("manualBackupBtn").addEventListener("click", () => {
+      const snapshot = createAutoBackup("manual", true);
+      if (snapshot) {
+        state.settings.autoBackupCounter = 0;
+        saveState();
+      }
+      renderAutoBackupList();
+      toast(snapshot ? "已创建浏览器自动备份" : "内容没有变化，无需重复备份");
+    });
+    document.getElementById("autoBackupList").addEventListener("click", (event) => {
+      const button = event.target.closest("[data-auto-backup-id]");
+      if (button) restoreAutoBackup(button.dataset.autoBackupId);
+    });
+    document.getElementById("previewBackupBtn").addEventListener("click", () => {
+      previewBackup();
+    });
+    document.getElementById("restoreBackupBtn").addEventListener("click", restoreBackup);
+    document.getElementById("backupModal").addEventListener("click", (event) => {
+      if (event.target.id === "backupModal") close();
+    });
+
+    const dropzone = document.getElementById("backupDropzone");
+    const fileInput = document.getElementById("backupFileInput");
+    const textArea = document.getElementById("backupText");
+    const chooseFile = () => fileInput.click();
+    dropzone.addEventListener("click", chooseFile);
+    dropzone.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        chooseFile();
+      }
+    });
+    ["dragenter", "dragover"].forEach((eventName) => {
+      dropzone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        dropzone.classList.add("dragover");
+      });
+    });
+    ["dragleave", "drop"].forEach((eventName) => {
+      dropzone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        dropzone.classList.remove("dragover");
+      });
+    });
+    dropzone.addEventListener("drop", async (event) => {
+      const file = event.dataTransfer.files && event.dataTransfer.files[0];
+      if (file) await readBackupFile(file);
+    });
+    fileInput.addEventListener("change", async () => {
+      const file = fileInput.files && fileInput.files[0];
+      if (file) await readBackupFile(file);
+      fileInput.value = "";
+    });
+    textArea.addEventListener("input", () => {
+      ui.backupPreview = null;
+      document.getElementById("backupSummary").hidden = true;
+      document.getElementById("restoreBackupBtn").disabled = true;
+    });
+
+    document.addEventListener("keydown", handleBackupModalKeydown);
+    renderAutoBackupList();
+    window.requestAnimationFrame(() => textArea.focus());
+  }
+
+  function closeBackupModal() {
+    if (!ui.modalOpen) return;
+    ui.modalOpen = false;
+    ui.backupPreview = null;
+    els.modalRoot.innerHTML = "";
+    document.body.classList.remove("modal-open");
+    document.removeEventListener("keydown", handleBackupModalKeydown);
+    if (ui.lastFocus && ui.lastFocus.isConnected) {
+      ui.lastFocus.focus({ preventScroll: true });
+    }
+    ui.lastFocus = null;
+  }
+
+  function handleBackupModalKeydown(event) {
+    if (!ui.modalOpen) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeBackupModal();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const modal = document.querySelector("#backupModal .modal");
+    if (!modal) return;
+    const focusables = [
+      ...modal.querySelectorAll(
+        'button, [href], input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"])',
+      ),
+    ].filter((element) => !element.disabled && element.offsetParent !== null);
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  async function readBackupFile(file) {
+    if (!/\.json$/i.test(file.name)) {
+      showBackupError("请选择本页面导出的 JSON 备份文件。");
+      return;
+    }
+    try {
+      const text = await file.text();
+      const textArea = document.getElementById("backupText");
+      const fileName = document.getElementById("backupFileName");
+      textArea.value = text;
+      fileName.textContent = `已读取：${file.name}`;
+      previewBackup();
+    } catch (error) {
+      showBackupError("备份文件读取失败，请重试。");
+    }
+  }
+
+  function showBackupSummary(message, isError = false) {
+    const summary = document.getElementById("backupSummary");
+    if (!summary) return;
+    summary.hidden = false;
+    summary.style.background = isError ? "var(--danger-soft)" : "";
+    summary.style.color = isError ? "var(--danger)" : "";
+    summary.textContent = message;
+  }
+
+  function showBackupError(message) {
+    showBackupSummary(message, true);
+    const restore = document.getElementById("restoreBackupBtn");
+    if (restore) restore.disabled = true;
+  }
+
+  function previewBackup() {
+    const text = document.getElementById("backupText")?.value.trim() || "";
+    if (!text) {
+      showBackupError("请先选择备份文件，或粘贴备份 JSON。");
+      return false;
+    }
+    try {
+      const backup = parseBackup(text);
+      ui.backupPreview = backup;
+      const date = backup.exportedAt
+        ? new Date(backup.exportedAt).toLocaleString("zh-CN")
+        : "未记录";
+      const details = [
+        `备份时间：${date}`,
+        `题库：${backup.questions.length} 题`,
+        `口诀：${backup.mnemonics.length} 条`,
+        `做题注意：${backup.cautions.length} 条`,
+      ];
+      if (backup.errors.length) {
+        details.push(`另有 ${backup.errors.length} 条内容无法识别，将被跳过。`);
+      }
+      showBackupSummary(details.join("\n"));
+      const restore = document.getElementById("restoreBackupBtn");
+      if (restore) restore.disabled = false;
+      return true;
+    } catch (error) {
+      showBackupError(error.message);
+      return false;
+    }
+  }
+
+  function mergeBackupData(backup) {
+    let addedQuestions = 0;
+    let addedMnemonics = 0;
+    let addedCautions = 0;
+
+    for (const incoming of backup.questions) {
+      incoming.id = uid();
+      state.questions.push(incoming);
+      addedQuestions += 1;
+    }
+
+    for (const incoming of backup.mnemonics) {
+      incoming.id = uid();
+      state.mnemonics.push(incoming);
+      addedMnemonics += 1;
+    }
+
+    for (const incoming of backup.cautions) {
+      incoming.id = uid();
+      state.cautions.push(incoming);
+      addedCautions += 1;
+    }
+
+    return { addedQuestions, addedMnemonics, addedCautions };
+  }
+
+  function restoreBackup() {
+    const text = document.getElementById("backupText")?.value.trim() || "";
+    let backup = ui.backupPreview;
+    if (!backup) {
+      if (!previewBackup()) return;
+      backup = ui.backupPreview;
+    }
+    if (!backup) return;
+
+    const mode =
+      document.querySelector('input[name="restoreMode"]:checked')?.value || "merge";
+    if (mode === "overwrite") {
+      if (!window.confirm("确定用备份覆盖当前题库和口诀吗？当前未备份的内容会丢失。")) {
+        return;
+      }
+      state.questions = backup.questions.map((question) => ({ ...question, id: uid() }));
+      state.mnemonics = backup.mnemonics.map((mnemonic) => ({ ...mnemonic, id: uid() }));
+      state.cautions = backup.cautions.map((caution) => ({ ...caution, id: uid() }));
+      state.currentId = null;
+      state.filter = "all";
+      state.subject = "all";
+      state.query = "";
+      ui.mnemonicQuery = "";
+      ui.mnemonicSubject = "all";
+      state.settings.autoBackupCounter = 0;
+      saveState();
+      closeBackupModal();
+      renderAll();
+      toast(
+        `已覆盖恢复 ${state.questions.length} 道题、${state.mnemonics.length} 条口诀、${state.cautions.length} 条注意`,
+      );
+      return;
+    }
+
+    const result = mergeBackupData(backup);
+    state.settings.autoBackupCounter = 0;
+    saveState();
+    closeBackupModal();
+    renderAll();
+    toast(
+      `已合并：新增 ${result.addedQuestions} 题、${result.addedMnemonics} 条口诀、${result.addedCautions} 条注意`,
+    );
+  }
+
+  function onNoteInput(value) {
+    const question = getCurrentQuestion();
+    if (!question) return;
+
+    question.note = value;
+    question.updatedAt = Date.now();
+    ui.noteDirty = true;
+    ui.noteTarget = question;
+
+    const count = document.getElementById("noteCount");
+    if (count) count.textContent = `${value.length} 字`;
+    const status = document.getElementById("noteStatus");
+    if (status) status.textContent = storageAvailable ? "保存中…" : "仅本次有效";
+
+    window.clearTimeout(ui.noteTimer);
+    ui.noteTimer = window.setTimeout(() => {
+      markContentChange(1);
+      saveState();
+      ui.noteDirty = false;
+      const currentStatus = document.getElementById("noteStatus");
+      if (currentStatus) currentStatus.textContent = storageAvailable ? "已保存" : "仅本次有效";
+    }, 350);
+  }
+
+  function flushNote() {
+    if (ui.noteTimer) {
+      window.clearTimeout(ui.noteTimer);
+      ui.noteTimer = null;
+    }
+    if (ui.noteDirty && ui.noteTarget) {
+      markContentChange(1);
+      saveState();
+      ui.noteDirty = false;
+    }
+  }
+
+  function toast(message, type = "info") {
+    const element = document.createElement("div");
+    element.className = `toast ${type}`;
+    element.textContent = message;
+    els.toastRoot.appendChild(element);
+
+    window.setTimeout(() => {
+      element.style.opacity = "0";
+      element.style.transform = "translateY(6px)";
+      window.setTimeout(() => element.remove(), 180);
+    }, 2600);
+  }
+
+  function handleMainClick(event) {
+    const actionElement = event.target.closest("[data-action]");
+    if (actionElement) {
+      event.preventDefault();
+      const action = actionElement.dataset.action;
+      if (action === "submit") submitAnswer();
+      else if (action === "retry") retryQuestion();
+      else if (action === "prev") navigate(-1);
+      else if (action === "next") navigate(1);
+      else if (action === "case-prev") navigateCase(-1);
+      else if (action === "case-next") navigateCase(1);
+      else if (action === "master") toggleMastered();
+      else if (action === "delete") deleteQuestion();
+      else if (action === "edit-question") openQuestionEditor();
+      else if (action === "make-mnemonic") makeMnemonicFromQuestion();
+      else if (action === "make-caution") makeCautionFromQuestion();
+      else if (action === "open-import") openImportModal();
+      else if (action === "load-demo") loadDemo();
+      else if (action === "clear-filters") clearFilters();
+      return;
+    }
+
+    const option = event.target.closest(".option");
+    if (option && !option.disabled) {
+      toggleOption(option.dataset.key);
+    }
+  }
+
+  function handleMainInput(event) {
+    if (event.target.id === "noteInput") {
+      onNoteInput(event.target.value);
+    }
+  }
+
+  function isTypingTarget(target) {
+    if (!target) return false;
+    const tag = target.tagName;
+    return (
+      tag === "INPUT" ||
+      tag === "TEXTAREA" ||
+      tag === "SELECT" ||
+      target.isContentEditable
+    );
+  }
+
+  function handleGlobalKeydown(event) {
+    if (ui.modalOpen) return;
+    if (isTypingTarget(event.target)) return;
+
+    if (/^[a-f]$/i.test(event.key)) {
+      event.preventDefault();
+      toggleOption(event.key.toUpperCase());
+      return;
+    }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      if (ui.revealed) navigate(1);
+      else submitAnswer();
+      return;
+    }
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      navigate(-1);
+      return;
+    }
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      navigate(1);
+    }
+  }
+
+  function parseCSV(text) {
+    const rows = [];
+    let row = [];
+    let field = "";
+    let inQuotes = false;
+    const input = text.replace(/^\uFEFF/, "");
+
+    for (let index = 0; index < input.length; index += 1) {
+      const char = input[index];
+      if (inQuotes) {
+        if (char === '"') {
+          if (input[index + 1] === '"') {
+            field += '"';
+            index += 1;
+          } else {
+            inQuotes = false;
+          }
+        } else {
+          field += char;
+        }
+      } else if (char === '"') {
+        inQuotes = true;
+      } else if (char === ",") {
+        row.push(field);
+        field = "";
+      } else if (char === "\n") {
+        row.push(field);
+        rows.push(row);
+        row = [];
+        field = "";
+      } else if (char !== "\r") {
+        field += char;
+      }
+    }
+
+    if (field.length || row.length) {
+      row.push(field);
+      rows.push(row);
+    }
+    return rows.filter((cells) => cells.some((cell) => cell.trim() !== ""));
+  }
+
+  function normHeader(value) {
+    return String(value ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/[\s_\-:：（）()]/g, "");
+  }
+
+  function findColumn(header, aliases) {
+    const normalized = header.map(normHeader);
+    for (const alias of aliases) {
+      const target = normHeader(alias);
+      const index = normalized.findIndex(
+        (value) => value === target || value.includes(target),
+      );
+      if (index !== -1) return index;
+    }
+    return -1;
+  }
+
+  function findOptionColumn(header, letter) {
+    const normalized = header.map(normHeader);
+    const targets = [
+      letter.toLowerCase(),
+      `选项${letter.toLowerCase()}`,
+      `option${letter.toLowerCase()}`,
+      `choice${letter.toLowerCase()}`,
+    ];
+    return normalized.findIndex((value) => targets.includes(value));
+  }
+
+  function parseCSVToRaws(text) {
+    const rows = parseCSV(text);
+    if (!rows.length) return [];
+
+    const header = rows[0].map((cell) => String(cell));
+    const stemIndex = findColumn(header, ["题目", "题干", "问题", "question", "stem", "title"]);
+    const answerIndex = findColumn(header, ["答案", "正确答案", "参考答案", "answer", "correct", "key"]);
+    const explanationIndex = findColumn(header, ["解析", "答案解析", "分析", "explanation", "analysis"]);
+    const subjectIndex = findColumn(header, ["学科", "科目", "subject", "category"]);
+    const tagsIndex = findColumn(header, ["标签", "tags", "tag"]);
+
+    if (stemIndex === -1) {
+      const looksLikeHeader = header.some((cell) => /答案|answer|correct/i.test(cell));
+      if (looksLikeHeader) {
+        throw new Error("CSV 缺少题干列，表头应包含“题目”或“题干”。");
+      }
+      return rows.map((cells) => ({
+        stem: cells[0],
+        A: cells[1],
+        B: cells[2],
+        C: cells[3],
+        D: cells[4],
+        answer: cells[5],
+        explanation: cells[6] || "",
+        subject: cells[7] || "",
+        tags: cells[8] || "",
+      }));
+    }
+
+    const optionIndexes = {};
+    for (const letter of ["A", "B", "C", "D", "E", "F"]) {
+      optionIndexes[letter] = findOptionColumn(header, letter);
+    }
+
+    return rows.slice(1).map((cells) => {
+      const raw = {
+        stem: cells[stemIndex] || "",
+        answer: answerIndex >= 0 ? cells[answerIndex] || "" : "",
+        explanation: explanationIndex >= 0 ? cells[explanationIndex] || "" : "",
+        subject: subjectIndex >= 0 ? cells[subjectIndex] || "" : "",
+        tags: tagsIndex >= 0 ? cells[tagsIndex] || "" : "",
+      };
+      for (const letter of ["A", "B", "C", "D", "E", "F"]) {
+        if (optionIndexes[letter] >= 0) raw[letter] = cells[optionIndexes[letter]] || "";
+      }
+      return raw;
+    });
+  }
+
+  function parseTextBlock(block) {
+    if (block.includes("|")) {
+      const parts = block.split(/\s*\|\s*/).map((part) => part.trim());
+      if (parts.length >= 6) {
+        return {
+          stem: parts[0],
+          A: parts[1],
+          B: parts[2],
+          C: parts[3],
+          D: parts[4],
+          answer: parts[5],
+          explanation: parts[6] || "",
+          subject: parts[7] || "",
+          tags: parts[8] || "",
+        };
+      }
+    }
+
+    const lines = block
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const stemLines = [];
+    const options = [];
+    const explanationLines = [];
+    let answer = "";
+    let subject = "";
+    let tags = "";
+    let mode = "stem";
+
+    for (const line of lines) {
+      if (mode === "stem" || mode === "option") {
+        const optionMatch = line.match(/^([A-F])\s*[.、．:：，,]\s*(.+)$/);
+        if (optionMatch) {
+          options.push({ key: optionMatch[1], text: optionMatch[2].trim() });
+          mode = "option";
+          continue;
+        }
+      }
+
+      const answerMatch = line.match(
+        /^(?:答案|正确答案|参考答案)\s*[：:]?\s*([A-Fa-f][A-Fa-f、,，\s]*)/,
+      );
+      if (answerMatch && mode !== "explanation") {
+        answer = answerMatch[1];
+        mode = "answer";
+        continue;
+      }
+
+      const explanationMatch = line.match(/^(?:解析|答案解析|分析)\s*[：:]?\s*(.*)$/);
+      if (explanationMatch) {
+        if (explanationMatch[1]) explanationLines.push(explanationMatch[1]);
+        mode = "explanation";
+        continue;
+      }
+
+      const subjectMatch = line.match(/^(?:学科|科目)\s*[：:]\s*(.+)$/);
+      if (subjectMatch) {
+        subject = subjectMatch[1].trim();
+        mode = "meta";
+        continue;
+      }
+
+      const tagsMatch = line.match(/^标签\s*[：:]\s*(.+)$/);
+      if (tagsMatch) {
+        tags = tagsMatch[1].trim();
+        mode = "meta";
+        continue;
+      }
+
+      if (mode === "stem") {
+        stemLines.push(line);
+      } else if (mode === "option" && options.length) {
+        options[options.length - 1].text += ` ${line}`;
+      } else if (mode === "explanation") {
+        explanationLines.push(line);
+      }
+    }
+
+    if (stemLines.length) {
+      stemLines[0] = stemLines[0].replace(/^(?:\d+[.、．，,]|第\s*\d+\s*题)\s*/, "");
+    }
+
+    return {
+      stem: stemLines.join(" "),
+      options,
+      answer,
+      explanation: explanationLines.join("\n"),
+      subject,
+      tags,
+    };
+  }
+
+  function parseTextToRaws(text) {
+    const hasNumberedBlocks = /^\s*(?:\d+[.、．，,]|第\s*\d+\s*题)/m.test(text);
+    let blocks;
+    if (hasNumberedBlocks) {
+      blocks = text
+        .split(/(?=^\s*(?:\d+[.、．，,]|第\s*\d+\s*题)\s*)/m)
+        .map((block) => block.trim())
+        .filter(Boolean);
+    } else {
+      blocks = text
+        .split(/\n\s*\n+/)
+        .map((block) => block.trim())
+        .filter(Boolean);
+    }
+    return blocks.map(parseTextBlock);
+  }
+
+  function parseCaseTextToRaws(text) {
+    const normalized = String(text ?? "").replace(/\r/g, "").trim();
+    const headerMatch = normalized.match(
+      /^【病例题】\s*(.*?)\n([\s\S]*?)(?=【第\s*1\s*问】)/,
+    );
+    if (!headerMatch) {
+      throw new Error("病例题格式不正确：需要【病例题】标题和【第1问】");
+    }
+
+    const caseTitle = headerMatch[1].trim() || "病例题";
+    const header = headerMatch[2];
+    const subject =
+      header.match(/^(?:学科|科目)\s*[：:]\s*(.+)$/m)?.[1]?.trim() || "未分类";
+    const tags = header.match(/^标签\s*[：:]\s*(.+)$/m)?.[1]?.trim() || "";
+    const caseText = header
+      .replace(/^(?:学科|科目|标签)\s*[：:].*$/gm, "")
+      .replace(/^病例(?:描述)?\s*[：:]?\s*/m, "")
+      .trim();
+    if (!caseText) throw new Error("病例题缺少病例描述");
+
+    const chunks = normalized.split(/【第\s*(\d+)\s*问】/);
+    const subs = [];
+    for (let index = 1; index < chunks.length; index += 2) {
+      const body = chunks[index + 1]?.trim();
+      if (!body) continue;
+      const raw = parseTextBlock(body);
+      if (!raw.stem || !raw.options.length) {
+        throw new Error(`第 ${chunks[index]} 问缺少题干或选项`);
+      }
+      subs.push(raw);
+    }
+    if (!subs.length) throw new Error("病例题没有可用的子问题");
+
+    const caseId = uid();
+    return subs.map((sub, index) => ({
+      ...sub,
+      caseId,
+      caseTitle,
+      caseText,
+      caseOrder: index,
+      caseTotal: subs.length,
+      subject: sub.subject || subject,
+      tags: sub.tags || tags,
+    }));
+  }
+
+  function normalizeImportedQuestion(raw) {
+    if (!raw || typeof raw !== "object") {
+      throw new Error("不是有效的题目对象");
+    }
+
+    const stem = String(
+      raw.stem ?? raw.question ?? raw.title ?? raw["题干"] ?? raw["题目"] ?? raw["问题"] ?? "",
+    ).trim();
+    if (!stem) throw new Error("缺少题干");
+
+    let options = [];
+    const rawOptions = raw.options ?? raw.choices ?? raw["选项"];
+
+    if (Array.isArray(rawOptions)) {
+      options = rawOptions.map((item, index) => {
+        if (item && typeof item === "object") {
+          return {
+            key: letterAt(index),
+            text: String(item.text ?? item.label ?? item.content ?? item.value ?? "").trim(),
+          };
+        }
+        return { key: letterAt(index), text: String(item ?? "").trim() };
+      });
+    } else if (rawOptions && typeof rawOptions === "object") {
+      options = Object.keys(rawOptions)
+        .filter((key) => /^[A-F]$/i.test(key))
+        .sort()
+        .map((key) => ({ key: key.toUpperCase(), text: String(rawOptions[key] ?? "").trim() }));
+    } else {
+      for (const letter of ["A", "B", "C", "D", "E", "F"]) {
+        const value =
+          raw[letter] ??
+          raw[`选项${letter}`] ??
+          raw[`option${letter}`] ??
+          raw[`choice${letter}`];
+        if (value !== undefined && value !== null && String(value).trim()) {
+          options.push({ key: letter, text: String(value).trim() });
+        }
+      }
+    }
+
+    options = options.filter((option) => option.text);
+    if (options.length < 2) throw new Error("至少需要两个有效选项");
+    options = options.map((option, index) => ({ key: letterAt(index), text: option.text }));
+
+    const answer = normalizeAnswer(
+      raw.answer ?? raw.correct ?? raw["答案"] ?? raw["正确答案"] ?? raw["参考答案"],
+      options.length,
+    );
+    if (!answer) throw new Error("缺少有效答案（如 C 或 ACD）");
+
+    const tagsValue = raw.tags ?? raw["标签"] ?? "";
+    const tags = Array.isArray(tagsValue)
+      ? tagsValue.map(String)
+      : String(tagsValue)
+          .split(/[,，、;；]/)
+          .map((tag) => tag.trim())
+          .filter(Boolean);
+
+    return {
+      id: uid(),
+      stem,
+      options,
+      answer,
+      explanation: String(
+        raw.explanation ?? raw.analysis ?? raw["解析"] ?? raw["答案解析"] ?? "",
+      ).trim(),
+      subject:
+        String(raw.subject ?? raw["学科"] ?? raw["科目"] ?? "未分类").trim() || "未分类",
+      tags: [...new Set(tags)].slice(0, 6),
+      caseId: typeof raw.caseId === "string" && raw.caseId ? raw.caseId : null,
+      caseTitle: String(raw.caseTitle ?? "").trim(),
+      caseText: String(raw.caseText ?? raw.case ?? "").trim(),
+      caseOrder: Number(raw.caseOrder) || 0,
+      caseTotal: Number(raw.caseTotal) || 0,
+      note: String(raw.note ?? ""),
+      attempts: Number(raw.attempts) || 0,
+      correctCount: Number(raw.correctCount) || 0,
+      lastResult:
+        raw.lastResult === "correct" || raw.lastResult === "wrong" ? raw.lastResult : null,
+      mastered: Boolean(raw.mastered),
+      createdAt: Number(raw.createdAt) || Date.now(),
+      updatedAt: Date.now(),
+    };
+  }
+
+  function expandCaseRaw(raw) {
+    if (!raw || typeof raw !== "object") return [raw];
+    const isCase =
+      String(raw.type || "").toLowerCase() === "case" ||
+      (Array.isArray(raw.questions) && Boolean(raw.case || raw.caseText || raw.description));
+    if (!isCase) return [raw];
+
+    const subs = raw.questions;
+    if (!Array.isArray(subs) || !subs.length) {
+      throw new Error("病例题需要至少一个子问题");
+    }
+    const caseText = String(raw.case ?? raw.caseText ?? raw.description ?? "").trim();
+    if (!caseText) throw new Error("病例题缺少病例描述");
+    const caseTitle = String(raw.title ?? raw.caseTitle ?? "病例题").trim() || "病例题";
+    const caseId = uid();
+    const subject = raw.subject ?? raw["学科"] ?? "未分类";
+    const tags = raw.tags ?? raw["标签"] ?? [];
+
+    return subs.map((sub, index) => ({
+      ...sub,
+      caseId,
+      caseTitle,
+      caseText,
+      caseOrder: index,
+      caseTotal: subs.length,
+      subject: sub.subject ?? subject,
+      tags: sub.tags ?? tags,
+    }));
+  }
+
+  function parseImport(text) {
+    const trimmed = String(text ?? "").trim();
+    if (!trimmed) return { items: [], errors: ["内容为空"] };
+
+    let raws = [];
+    try {
+      if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+        const data = JSON.parse(trimmed);
+        if (Array.isArray(data)) {
+          raws = data;
+        } else if (
+          data &&
+          (String(data.type || "").toLowerCase() === "case" ||
+            data.case ||
+            data.caseText ||
+            data.description)
+        ) {
+          raws = [data];
+        } else if (data && Array.isArray(data.questions)) {
+          raws = data.questions;
+        } else if (data && typeof data === "object") {
+          raws = [data];
+        } else {
+          return { items: [], errors: ["JSON 顶层应为题目数组或包含 questions 数组"] };
+        }
+      } else {
+        const firstLine = trimmed.split(/\r?\n/, 1)[0];
+        const looksLikeCSV =
+          firstLine.includes(",") &&
+          (/(题目|题干|question|stem|答案|answer)/i.test(firstLine) ||
+            firstLine.split(",").length >= 6);
+        raws = looksLikeCSV
+          ? parseCSVToRaws(trimmed)
+          : trimmed.includes("【病例题】")
+            ? parseCaseTextToRaws(trimmed)
+            : parseTextToRaws(trimmed);
+      }
+    } catch (error) {
+      return { items: [], errors: [error.message || "内容解析失败"] };
+    }
+
+    const expanded = [];
+    const errors = [];
+    raws.forEach((raw, index) => {
+      try {
+        expanded.push(...expandCaseRaw(raw));
+      } catch (error) {
+        errors.push(`第 ${index + 1} 条：${error.message}`);
+      }
+    });
+
+    const items = [];
+    expanded.forEach((raw, index) => {
+      try {
+        items.push(normalizeImportedQuestion(raw));
+      } catch (error) {
+        errors.push(`第 ${index + 1} 条：${error.message}`);
+      }
+    });
+
+    return { items, errors };
+  }
+
+  function modalHTML() {
+    return `
+      <div class="modal-overlay" id="importModal">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="importTitle">
+          <div class="modal-head">
+            <div>
+              <h2 id="importTitle">导入错题</h2>
+              <p class="modal-sub">支持 JSON、CSV、TXT、Markdown 和截图；每题需包含题干、选项和答案。导入后自动保存在本机。</p>
+            </div>
+            <button class="icon-btn" type="button" id="closeImport" aria-label="关闭导入窗口" title="关闭">
+              ${icon("close")}
+            </button>
+          </div>
+
+          <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="选择要导入的文件">
+            ${icon("file")}
+            <strong>拖入文件、截图，或点击选择</strong>
+            <span>JSON / CSV / TXT / Markdown / PNG / JPG</span>
+            <div class="file-name" id="modalFileName"></div>
+          </div>
+          <input type="file" id="fileInput" accept=".json,.csv,.txt,.md,.markdown,.png,.jpg,.jpeg,.webp,.bmp" hidden>
+
+          <div class="image-preview" id="imagePreview" hidden>
+            <img id="ocrPreview" alt="待识别截图预览">
+            <div class="ocr-status" id="ocrStatus"></div>
+          </div>
+          <div class="ocr-tip">截图识别在本机浏览器内完成，图片不会上传到服务器。也可以直接按 Ctrl+V 粘贴截图。</div>
+
+          <div class="template-row">
+            <button class="btn btn-small" type="button" id="insertQuestionTemplateBtn">
+              ${icon("plus")}插入普通题模板
+            </button>
+            <button class="btn btn-small" type="button" id="insertCaseTemplateBtn">
+              ${icon("plus")}插入病例题模板
+            </button>
+            <span>普通题 = 一题一答；病例题 = 总病例描述 + 多个【第n问】</span>
+          </div>
+
+          <div class="divider">或直接粘贴</div>
+          <label class="sr-only" for="importText">粘贴题目内容</label>
+          <textarea
+            class="import-area"
+            id="importText"
+            placeholder="粘贴题目文本、JSON 或 CSV…"
+          ></textarea>
+
+          <details class="format">
+            <summary>查看支持的格式</summary>
+            <pre>文本格式示例
+1. 题干内容
+A. 选项一
+B. 选项二
+C. 选项三
+D. 选项四
+答案：C
+解析：这里写解析
+学科：内科学
+标签：心衰, 指南
+
+JSON 示例
+[{"stem":"题干","options":["A选项","B选项","C选项","D选项"],"answer":"C","explanation":"解析","subject":"内科学","tags":["心衰"]}]
+
+CSV 表头
+题目,选项A,选项B,选项C,选项D,答案,解析,学科,标签
+
+病例题文本格式
+【病例题】病例标题
+病例：
+总病例描述
+学科：内科学
+标签：病例题
+
+【第1问】子问题
+A. 选项
+B. 选项
+C. 选项
+D. 选项
+答案：C
+解析：解析
+
+【第2问】子问题
+...</pre>
+          </details>
+
+          <div class="import-result" id="importResult" hidden></div>
+
+          <div class="modal-foot">
+            <button class="btn btn-ghost btn-danger" type="button" id="clearDataBtn">清空全部数据</button>
+            <span class="spacer"></span>
+            <button class="btn" type="button" id="cancelImport">取消</button>
+            <button class="btn btn-primary" type="button" id="confirmImportBtn">导入题目</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function showImportResult(message, type = "ok", hide = false) {
+    const result = document.getElementById("importResult");
+    if (!result) return;
+    if (hide || !message) {
+      result.hidden = true;
+      result.textContent = "";
+      result.className = "import-result";
+      return;
+    }
+    result.hidden = false;
+    result.className = `import-result ${type}`;
+    result.textContent = message;
+  }
+
+  function insertCaseTemplate() {
+    const area = document.getElementById("importText");
+    if (!area) return;
+    const template = `【病例题】在这里写病例标题
+病例：
+在这里写总的病例描述，可以多行。
+学科：内科学
+标签：病例题
+
+【第1问】在这里写第一问
+A. 选项一
+B. 选项二
+C. 选项三
+D. 选项四
+答案：C
+解析：在这里写解析
+
+【第2问】在这里写第二问
+A. 选项一
+B. 选项二
+C. 选项三
+D. 选项四
+答案：B
+解析：在这里写解析`;
+    area.value = area.value.trim() ? `${area.value.trim()}\n\n${template}` : template;
+    area.focus();
+    showImportResult("", "ok", true);
+  }
+
+  function insertQuestionTemplate() {
+    const area = document.getElementById("importText");
+    if (!area) return;
+    const template = `1. 在这里写题干
+A. 选项一
+B. 选项二
+C. 选项三
+D. 选项四
+答案：C
+解析：在这里写解析
+学科：内科学
+标签：标签1, 标签2`;
+    area.value = area.value.trim() ? `${area.value.trim()}\n\n${template}` : template;
+    area.focus();
+    showImportResult("", "ok", true);
+  }
+
+  function openImportModal() {
+    if (ui.modalOpen) return;
+    ui.modalOpen = true;
+    ui.lastFocus = document.activeElement;
+    els.modalRoot.innerHTML = modalHTML();
+    document.body.classList.add("modal-open");
+
+    const modal = document.getElementById("importModal");
+    const dropzone = document.getElementById("dropzone");
+    const fileInput = document.getElementById("fileInput");
+    const importText = document.getElementById("importText");
+
+    const close = () => closeImportModal();
+    document.getElementById("closeImport").addEventListener("click", close);
+    document.getElementById("cancelImport").addEventListener("click", close);
+    modal.addEventListener("click", (event) => {
+      if (event.target === modal) close();
+    });
+
+    const chooseFile = () => fileInput.click();
+    dropzone.addEventListener("click", chooseFile);
+    dropzone.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        chooseFile();
+      }
+    });
+
+    ["dragenter", "dragover"].forEach((eventName) => {
+      dropzone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        dropzone.classList.add("dragover");
+      });
+    });
+    ["dragleave", "drop"].forEach((eventName) => {
+      dropzone.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        dropzone.classList.remove("dragover");
+      });
+    });
+    dropzone.addEventListener("drop", async (event) => {
+      const file = event.dataTransfer.files && event.dataTransfer.files[0];
+      if (file) await readImportFile(file);
+    });
+
+    fileInput.addEventListener("change", async () => {
+      const file = fileInput.files && fileInput.files[0];
+      if (file) await readImportFile(file);
+      fileInput.value = "";
+    });
+
+    modal.addEventListener("paste", (event) => {
+      const items = event.clipboardData && event.clipboardData.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type && item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) {
+            event.preventDefault();
+            handleImageFile(file);
+            break;
+          }
+        }
+      }
+    });
+
+    importText.addEventListener("input", () => showImportResult("", "ok", true));
+    document.getElementById("insertQuestionTemplateBtn").addEventListener("click", insertQuestionTemplate);
+    document.getElementById("insertCaseTemplateBtn").addEventListener("click", insertCaseTemplate);
+    document.getElementById("confirmImportBtn").addEventListener("click", doImport);
+    document.getElementById("clearDataBtn").addEventListener("click", clearAllData);
+
+    document.addEventListener("keydown", handleModalKeydown);
+    window.requestAnimationFrame(() => importText.focus());
+  }
+
+  function closeImportModal() {
+    if (!ui.modalOpen) return;
+    ui.modalOpen = false;
+    els.modalRoot.innerHTML = "";
+    document.body.classList.remove("modal-open");
+    document.removeEventListener("keydown", handleModalKeydown);
+    if (ui.lastFocus && ui.lastFocus.isConnected) {
+      ui.lastFocus.focus({ preventScroll: true });
+    }
+    ui.lastFocus = null;
+  }
+
+  function handleModalKeydown(event) {
+    if (!ui.modalOpen) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeImportModal();
+      return;
+    }
+    if (event.key !== "Tab") return;
+
+    const modal = document.querySelector("#importModal .modal");
+    if (!modal) return;
+    const focusables = [
+      ...modal.querySelectorAll(
+        'button, [href], input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"])',
+      ),
+    ].filter((element) => !element.disabled && element.offsetParent !== null);
+    if (!focusables.length) return;
+
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  function isImageFile(file) {
+    return Boolean(file) && (
+      String(file.type || "").startsWith("image/") ||
+      /\.(png|jpe?g|webp|bmp)$/i.test(file.name || "")
+    );
+  }
+
+  function setOcrStatus(title, detail, progress) {
+    const box = document.getElementById("ocrStatus");
+    if (!box) return;
+    const percent = Math.max(0, Math.min(100, Number(progress) || 0));
+    box.innerHTML = `
+      <strong>${escapeHtml(title)}</strong>
+      <span>${escapeHtml(detail || "")}</span>
+      <div class="ocr-progress"><span style="width:${percent}%"></span></div>
+    `;
+  }
+
+  function loadScriptSource(source) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = source;
+      script.async = true;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error(`无法加载 ${source}`));
+      document.head.appendChild(script);
+    });
+  }
+
+  async function ensureTesseract() {
+    if (window.Tesseract) return;
+    if (!tesseractLoadingPromise) {
+      tesseractLoadingPromise = (async () => {
+        const sources = [
+          "./tesseract/tesseract.min.js",
+          "https://fastly.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js",
+          "https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js",
+        ];
+        let lastError = null;
+        for (const source of sources) {
+          try {
+            await loadScriptSource(source);
+            if (window.Tesseract) return;
+          } catch (error) {
+            lastError = error;
+          }
+        }
+        throw lastError || new Error("OCR engine not loaded");
+      })().catch((error) => {
+        tesseractLoadingPromise = null;
+        throw error;
+      });
+    }
+    return tesseractLoadingPromise;
+  }
+
+  async function getOcrWorker() {
+    await ensureTesseract();
+    if (!ocrWorkerPromise) {
+      ocrWorkerPromise = (async () => {
+        const pathSets = [
+          {
+            workerPath: "./tesseract/worker.min.js",
+            corePath: "./tesseract/core",
+            langPath: "./tessdata",
+          },
+          {
+            workerPath:
+              "https://fastly.jsdelivr.net/npm/tesseract.js@7.0.0/dist/worker.min.js",
+            corePath: "https://fastly.jsdelivr.net/npm/tesseract.js-core@7.0.0",
+            langPath:
+              "https://fastly.jsdelivr.net/gh/tesseract-ocr/tessdata_fast@main",
+          },
+          {
+            workerPath:
+              "https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/worker.min.js",
+            corePath: "https://cdn.jsdelivr.net/npm/tesseract.js-core@7.0.0",
+            langPath:
+              "https://cdn.jsdelivr.net/gh/tesseract-ocr/tessdata_fast@main",
+          },
+        ];
+        const logger = (message) => {
+          const labels = {
+            "loading tesseract core": "加载识别引擎",
+            "initializing tesseract": "初始化识别引擎",
+            "loading language traineddata": "加载中文模型",
+            "initializing api": "准备识别",
+            "recognizing text": "识别文字",
+          };
+          const label = labels[message.status] || message.status || "识别中";
+          const progress =
+            typeof message.progress === "number"
+              ? Math.round(message.progress * 100)
+              : null;
+          setOcrStatus(
+            label,
+            progress === null ? "首次使用会稍慢，请稍候。" : `${progress}%`,
+            progress,
+          );
+        };
+
+        let lastError = null;
+        for (const paths of pathSets) {
+          try {
+            const worker = await window.Tesseract.createWorker(["chi_sim"], 1, {
+              workerPath: paths.workerPath,
+              corePath: paths.corePath,
+              langPath: paths.langPath,
+              gzip: false,
+              logger,
+            });
+            await worker.setParameters({ preserve_interword_spaces: "1" });
+            return worker;
+          } catch (error) {
+            lastError = error;
+          }
+        }
+        throw lastError || new Error("OCR worker unavailable");
+      })().catch((error) => {
+        ocrWorkerPromise = null;
+        throw error;
+      });
+    }
+    return ocrWorkerPromise;
+  }
+
+  async function prepareOcrImage(file) {
+    if (typeof window.createImageBitmap !== "function") return file;
+    try {
+      const bitmap = await window.createImageBitmap(file);
+      const minWidth = 1200;
+      const maxWidth = 2000;
+      let scale = 1;
+      if (bitmap.width < minWidth) {
+        scale = Math.min(2.5, minWidth / bitmap.width);
+      } else if (bitmap.width > maxWidth) {
+        scale = maxWidth / bitmap.width;
+      }
+      if (Math.abs(scale - 1) < 0.05) {
+        if (typeof bitmap.close === "function") bitmap.close();
+        return file;
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      const context = canvas.getContext("2d");
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = "high";
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      if (typeof bitmap.close === "function") bitmap.close();
+      return canvas;
+    } catch (error) {
+      return file;
+    }
+  }
+
+  function normalizeOcrText(text) {
+    let value = String(text || "")
+      .replace(/\r/g, "")
+      .replace(/\u00a0/g, " ");
+    value = value.replace(/[ \t]+/g, " ");
+    for (let index = 0; index < 2; index += 1) {
+      value = value.replace(/([\u4e00-\u9fff])\s+([\u4e00-\u9fff])/g, "$1$2");
+    }
+    value = value.replace(/([\u4e00-\u9fff])\s+([，。；：、！？])/g, "$1$2");
+    value = value.replace(/([，。；：、！？])\s+/g, "$1");
+    value = value.replace(
+      /(^|\n|\s)([A-F])\s*[.、．:：，,]\s*/g,
+      (match, prefix, letter) => `${prefix === " " ? "\n" : prefix}${letter}. `,
+    );
+    value = value.replace(/\s*(答案|正确答案|参考答案)\s*[：:]\s*/g, "\n$1：");
+    value = value.replace(/\s*(解析|答案解析|分析)\s*[：:]\s*/g, "\n$1：");
+    value = value.replace(/\s*(学科|科目)\s*[：:]\s*/g, "\n$1：");
+    value = value.replace(/\s*标签\s*[：:]\s*/g, "\n标签：");
+    value = value.replace(/\n{3,}/g, "\n\n");
+    return value.trim();
+  }
+
+  async function handleImageFile(file) {
+    if (!file) return;
+    if (!isImageFile(file)) {
+      showImportResult("请选择 PNG、JPG 或 WEBP 格式的截图。", "error");
+      return;
+    }
+    if (file.size > 12 * 1024 * 1024) {
+      showImportResult("截图超过 12 MB，请压缩或裁剪后再试。", "error");
+      return;
+    }
+    if (ocrBusy) {
+      toast("正在识别上一张截图，请稍候");
+      return;
+    }
+
+    ocrBusy = true;
+    showImportResult("", "ok", true);
+    const preview = document.getElementById("imagePreview");
+    const previewImage = document.getElementById("ocrPreview");
+    const objectUrl = URL.createObjectURL(file);
+    if (preview && previewImage) {
+      previewImage.src = objectUrl;
+      preview.hidden = false;
+    }
+    setOcrStatus("准备识别", "首次使用需要加载中文识别模型，请稍候。", 0);
+
+    try {
+      const worker = await getOcrWorker();
+      const image = await prepareOcrImage(file);
+      const result = await worker.recognize(image);
+      const normalized = normalizeOcrText(result.data.text);
+      if (!normalized) {
+        setOcrStatus(
+          "没有识别到文字",
+          "请换一张更清晰、正对题目的截图，或直接粘贴文字。",
+          0,
+        );
+        return;
+      }
+
+      const area = document.getElementById("importText");
+      if (area) {
+        area.value = area.value.trim()
+          ? `${area.value.trim()}\n\n${normalized}`
+          : normalized;
+        area.focus();
+      }
+      setOcrStatus(
+        "识别完成",
+        "请校对文字、选项和答案，确认后点击“导入题目”。",
+        100,
+      );
+    } catch (error) {
+      console.error(error);
+      setOcrStatus(
+        "识别失败",
+        "请确认网页是通过本地服务或公网链接打开；也可以直接粘贴文字。",
+        0,
+      );
+      toast("截图识别失败，请改用粘贴文字", "error");
+    } finally {
+      ocrBusy = false;
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+    }
+  }
+
+  async function readImportFile(file) {
+    if (isImageFile(file)) {
+      await handleImageFile(file);
+      return;
+    }
+    const preview = document.getElementById("imagePreview");
+    if (preview) preview.hidden = true;
+    if (!/\.(json|csv|txt|md|markdown)$/i.test(file.name)) {
+      showImportResult("请选择 JSON、CSV、TXT、Markdown 或截图文件。", "error");
+      return;
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      showImportResult("文件超过 3 MB，请拆分后再导入。", "error");
+      return;
+    }
+
+    try {
+      const text =
+        typeof file.text === "function"
+          ? await file.text()
+          : await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(String(reader.result || ""));
+              reader.onerror = () => reject(reader.error);
+              reader.readAsText(file, "utf-8");
+            });
+      const importText = document.getElementById("importText");
+      const fileName = document.getElementById("modalFileName");
+      importText.value = text;
+      fileName.textContent = `已读取：${file.name}`;
+      showImportResult("", "ok", true);
+    } catch (error) {
+      showImportResult("文件读取失败，请换一个文件重试。", "error");
+    }
+  }
+
+  function doImport() {
+    const importText = document.getElementById("importText");
+    const text = importText ? importText.value.trim() : "";
+    if (!text) {
+      showImportResult("请先选择文件，或粘贴题目内容。", "error");
+      return;
+    }
+
+    const result = parseImport(text);
+    if (!result.items.length) {
+      const details = result.errors.slice(0, 4).join("\n");
+      showImportResult(
+        `没有识别到有效题目。${details ? `\n${details}` : "\n请检查格式是否包含题干、选项和答案。"}`,
+        "error",
+      );
+      return;
+    }
+
+    const addedResult = addQuestions(result.items);
+    if (!addedResult.added) {
+      showImportResult("没有可导入的题目，请检查题干、选项和答案。", "error");
+      return;
+    }
+
+    const parts = [`已导入 ${addedResult.added} 道题`];
+    if (result.errors.length) parts.push(`${result.errors.length} 道未能识别`);
+    closeImportModal();
+    toast(parts.join("，"));
+  }
+
+  function clearAllData() {
+    if (!window.confirm("确定清空全部题目、作答记录和笔记吗？此操作不可撤销。")) return;
+
+    state.questions = [];
+    state.mnemonics = [];
+    state.cautions = [];
+    state.currentId = null;
+    state.filter = "all";
+    state.subject = "all";
+    state.query = "";
+    state.settings.autoBackupCounter = 0;
+    els.searchInput.value = "";
+    ui.selection = [];
+    ui.revealed = false;
+    ui.noteDirty = false;
+    ui.mnemonicQuery = "";
+    ui.mnemonicSubject = "all";
+    ui.cautionQuery = "";
+    ui.cautionSubject = "all";
+    ui.cautionStatus = "all";
+    window.clearTimeout(ui.noteTimer);
+
+    try {
+      window.localStorage.removeItem(STORAGE_KEY);
+      window.localStorage.removeItem(AUTO_BACKUP_KEY);
+    } catch (error) {
+      /* 本地存储不可用时只清空内存 */
+    }
+
+    closeImportModal();
+    renderAll();
+    toast("已清空全部数据");
+  }
+
+  function bindEvents() {
+    let searchTimer = null;
+
+    els.importBtn.addEventListener("click", openImportModal);
+    els.backupBtn.addEventListener("click", openBackupModal);
+
+    document.querySelectorAll(".view-tab").forEach((button) => {
+      button.addEventListener("click", () => {
+        const view = button.dataset.view;
+        state.view = ["practice", "mnemonics", "cautions"].includes(view)
+          ? view
+          : "practice";
+        saveState();
+        renderAll();
+      });
+    });
+
+    els.newMnemonicBtn.addEventListener("click", () => openMnemonicModal());
+
+    els.mnemonicSearch.addEventListener("input", () => {
+      ui.mnemonicQuery = els.mnemonicSearch.value;
+      els.clearMnemonicSearch.classList.toggle("is-visible", Boolean(ui.mnemonicQuery));
+      renderMnemonics();
+    });
+
+    els.clearMnemonicSearch.addEventListener("click", () => {
+      ui.mnemonicQuery = "";
+      els.mnemonicSearch.value = "";
+      els.clearMnemonicSearch.classList.remove("is-visible");
+      renderMnemonics();
+      els.mnemonicSearch.focus();
+    });
+
+    els.mnemonicSubjectFilter.addEventListener("change", () => {
+      ui.mnemonicSubject = els.mnemonicSubjectFilter.value;
+      renderMnemonics();
+    });
+
+    els.mnemonicGrid.addEventListener("click", (event) => {
+      const actionElement = event.target.closest("[data-mnemonic-action]");
+      if (!actionElement) return;
+      const action = actionElement.dataset.mnemonicAction;
+      const id = actionElement.dataset.id;
+      if (action === "new") {
+        openMnemonicModal();
+      } else if (action === "clear-filter") {
+        ui.mnemonicQuery = "";
+        ui.mnemonicSubject = "all";
+        els.mnemonicSearch.value = "";
+        renderMnemonics();
+      } else if (action === "edit") {
+        const target = state.mnemonics.find((item) => item.id === id);
+        if (target) openMnemonicModal(target);
+      } else if (action === "pin") {
+        toggleMnemonicPin(id);
+      } else if (action === "delete") {
+        deleteMnemonic(id);
+      }
+    });
+
+    els.newCautionBtn.addEventListener("click", () => openCautionModal());
+
+    els.cautionSearch.addEventListener("input", () => {
+      ui.cautionQuery = els.cautionSearch.value;
+      els.clearCautionSearch.classList.toggle("is-visible", Boolean(ui.cautionQuery));
+      renderCautions();
+    });
+
+    els.clearCautionSearch.addEventListener("click", () => {
+      ui.cautionQuery = "";
+      els.cautionSearch.value = "";
+      els.clearCautionSearch.classList.remove("is-visible");
+      renderCautions();
+      els.cautionSearch.focus();
+    });
+
+    els.cautionSubjectFilter.addEventListener("change", () => {
+      ui.cautionSubject = els.cautionSubjectFilter.value;
+      renderCautions();
+    });
+
+    els.cautionStatusFilter.addEventListener("change", () => {
+      ui.cautionStatus = els.cautionStatusFilter.value;
+      renderCautions();
+    });
+
+    els.cautionGrid.addEventListener("click", (event) => {
+      const actionElement = event.target.closest("[data-caution-action]");
+      if (!actionElement) return;
+      const action = actionElement.dataset.cautionAction;
+      const id = actionElement.dataset.id;
+      if (action === "new") {
+        openCautionModal();
+      } else if (action === "load-demo") {
+        loadDemoCautions();
+      } else if (action === "clear-filter") {
+        ui.cautionQuery = "";
+        ui.cautionSubject = "all";
+        ui.cautionStatus = "all";
+        els.cautionSearch.value = "";
+        renderCautions();
+      } else if (action === "toggle") {
+        toggleCautionChecked(id);
+      } else if (action === "edit") {
+        const target = state.cautions.find((item) => item.id === id);
+        if (target) openCautionModal(target);
+      } else if (action === "pin") {
+        toggleCautionPin(id);
+      } else if (action === "delete") {
+        deleteCaution(id);
+      }
+    });
+
+    els.searchInput.addEventListener("input", () => {
+      state.query = els.searchInput.value;
+      els.clearSearch.classList.toggle("is-visible", Boolean(state.query));
+      window.clearTimeout(searchTimer);
+      searchTimer = window.setTimeout(() => {
+        ui.selection = [];
+        ui.revealed = false;
+        renderAll();
+      }, 120);
+    });
+
+    els.clearSearch.addEventListener("click", () => {
+      state.query = "";
+      els.searchInput.value = "";
+      els.clearSearch.classList.remove("is-visible");
+      ui.selection = [];
+      ui.revealed = false;
+      renderAll();
+      els.searchInput.focus();
+    });
+
+    els.filters.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-filter]");
+      if (!button) return;
+      state.filter = button.dataset.filter;
+      ui.selection = [];
+      ui.revealed = false;
+      getCurrentQuestion();
+      saveState();
+      renderAll();
+    });
+
+    els.subjectFilter.addEventListener("change", () => {
+      state.subject = els.subjectFilter.value;
+      ui.selection = [];
+      ui.revealed = false;
+      getCurrentQuestion();
+      saveState();
+      renderAll();
+    });
+
+    els.questionList.addEventListener("click", (event) => {
+      const item = event.target.closest(".q-item");
+      if (item && item.dataset.id) selectQuestion(item.dataset.id);
+    });
+
+    els.main.addEventListener("click", handleMainClick);
+    els.main.addEventListener("input", handleMainInput);
+    document.addEventListener("keydown", handleGlobalKeydown);
+    window.addEventListener("beforeunload", flushNote);
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) flushNote();
+    });
+  }
+
+  function init() {
+    loadState();
+    const backups = loadAutoBackups();
+    if (
+      state.settings.autoBackup &&
+      !backups.length &&
+      (state.questions.length || state.mnemonics.length || state.cautions.length)
+    ) {
+      createAutoBackup("first");
+    }
+    bindEvents();
+    renderAll();
+    if (!storageAvailable) {
+      toast("浏览器未允许本地存储，刷新后数据会丢失", "error");
+    }
+  }
+
+  window.__wrongbook = {
+    getState: () => state,
+    getFiltered,
+    parseImport,
+    parseBackup,
+    addQuestions,
+  };
+
+  init();
+})();
+
+    </script>
+      <script src="butterfly-hero.js"></script>
+  </body>
+</html>
