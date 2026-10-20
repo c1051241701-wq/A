@@ -666,6 +666,60 @@ button:not(:disabled) {
   white-space: pre-wrap;
 }
 
+.auto-backup-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.auto-backup-progress {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1.6;
+}
+
+.auto-backup-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.auto-backup-meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.auto-backup-time {
+  color: var(--text);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.auto-backup-counts {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+
+.auto-backup-row .btn {
+  height: 28px;
+  padding: 0 8px;
+  font-size: 10.5px;
+}
+
+.auto-backup-empty {
+  padding: 6px 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .stat {
   min-width: 0;
   padding: 17px 20px 16px;
@@ -1114,6 +1168,66 @@ button:not(:disabled) {
   height: 30px;
   padding: 0 9px;
   font-size: 11px;
+}
+
+.edit-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.edit-option-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-option-row .text-input {
+  flex: 1;
+  height: 36px;
+}
+
+.edit-option-row .option-key {
+  width: 26px;
+  height: 26px;
+}
+
+.edit-option-row .icon-btn {
+  width: 30px;
+  height: 30px;
+}
+
+.correct-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.correct-toggle input {
+  accent-color: var(--accent);
+}
+
+.case-edit-fields {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid #e4d9ec;
+  border-radius: 10px;
+  background: #fbf8fd;
+}
+
+.case-edit-fields .field:first-child {
+  margin-top: 0;
+}
+
+.editor-hint {
+  margin: 5px 0 0;
+  color: var(--muted-2);
+  font-size: 10.5px;
+  line-height: 1.6;
 }
 
 .q-stem {
@@ -2227,7 +2341,7 @@ kbd {
   </section>
 
   <footer class="footer">
-    <div>数据仅保存在当前浏览器，不会上传到服务器。<span class="app-version">v2026.10.20.3</span></div>
+    <div>数据仅保存在当前浏览器，不会上传到服务器。<span class="app-version">v2026.10.20.5</span></div>
     <div class="keys" aria-label="键盘快捷键">
       <kbd>A</kbd><span>–</span><kbd>E</kbd><span>选择</span>
       <span>·</span>
@@ -2251,6 +2365,8 @@ kbd {
   "use strict";
 
   const STORAGE_KEY = "cuotiben.app.v1";
+  const AUTO_BACKUP_KEY = "cuotiben.autobackup.v1";
+  const AUTO_BACKUP_LIMIT = 5;
   const FILTERS = [
     { key: "all", label: "全部" },
     { key: "new", label: "未做" },
@@ -2380,6 +2496,7 @@ kbd {
     subject: "all",
     query: "",
     view: "practice",
+    settings: { autoBackup: true, autoBackupCounter: 0 },
   };
 
   const ui = {
@@ -2397,6 +2514,7 @@ kbd {
     cautionSubject: "all",
     cautionStatus: "all",
     editingCautionId: null,
+    editingQuestionId: null,
     backupPreview: null,
   };
 
@@ -2405,6 +2523,7 @@ kbd {
   let ocrWorkerPromise = null;
   let ocrBusy = false;
   let tesseractLoadingPromise = null;
+  let autoBackupWarned = false;
 
   function $(selector, root = document) {
     return root.querySelector(selector);
@@ -2606,6 +2725,13 @@ kbd {
         if (data.view === "mnemonics" || data.view === "cautions") {
           state.view = data.view;
         }
+        if (data.settings && typeof data.settings.autoBackup === "boolean") {
+          state.settings.autoBackup = data.settings.autoBackup;
+        }
+        if (data.settings) {
+          state.settings.autoBackupCounter =
+            Number(data.settings.autoBackupCounter) || 0;
+        }
       }
 
       if (state.questions.length && !state.questions.some((q) => q.id === state.currentId)) {
@@ -2630,6 +2756,7 @@ kbd {
           filter: state.filter,
           subject: state.subject,
           view: state.view,
+          settings: state.settings,
         }),
       );
       return true;
@@ -2640,6 +2767,169 @@ kbd {
       }
       return false;
     }
+  }
+
+  function loadAutoBackups() {
+    if (!storageAvailable) return [];
+    try {
+      const raw = window.localStorage.getItem(AUTO_BACKUP_KEY);
+      if (!raw) return [];
+      const list = JSON.parse(raw);
+      if (!Array.isArray(list)) return [];
+      return list
+        .filter((snapshot) => snapshot && Array.isArray(snapshot.questions))
+        .slice(0, AUTO_BACKUP_LIMIT);
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function saveAutoBackups(list) {
+    if (!storageAvailable) return false;
+    let current = list.slice(0, AUTO_BACKUP_LIMIT);
+    while (current.length) {
+      try {
+        window.localStorage.setItem(AUTO_BACKUP_KEY, JSON.stringify(current));
+        return true;
+      } catch (error) {
+        current = current.slice(0, -1);
+      }
+    }
+    if (!autoBackupWarned) {
+      autoBackupWarned = true;
+      toast("浏览器存储空间不足，自动备份暂时无法保存", "error");
+    }
+    return false;
+  }
+
+  function createAutoBackup(reason = "timer", force = false) {
+    if (!storageAvailable) return null;
+    if (!state.settings.autoBackup && !force) return null;
+    if (!state.questions.length && !state.mnemonics.length && !state.cautions.length) {
+      return null;
+    }
+
+    const payload = {
+      questions: state.questions,
+      mnemonics: state.mnemonics,
+      cautions: state.cautions,
+    };
+    const signature = JSON.stringify(payload);
+    const list = loadAutoBackups();
+    if (list[0]) {
+      const lastSignature = JSON.stringify({
+        questions: list[0].questions || [],
+        mnemonics: list[0].mnemonics || [],
+        cautions: list[0].cautions || [],
+      });
+      if (lastSignature === signature) {
+        return null;
+      }
+    }
+
+    const snapshot = {
+      id: uid(),
+      createdAt: Date.now(),
+      reason,
+      questions: JSON.parse(JSON.stringify(state.questions)),
+      mnemonics: JSON.parse(JSON.stringify(state.mnemonics)),
+      cautions: JSON.parse(JSON.stringify(state.cautions)),
+    };
+    list.unshift(snapshot);
+    if (saveAutoBackups(list)) {
+      return snapshot;
+    }
+    return null;
+  }
+
+  function markContentChange(amount = 1) {
+    if (!state.settings.autoBackup) return;
+    const increment = Math.max(0, Number(amount) || 0);
+    if (!increment) return;
+    state.settings.autoBackupCounter =
+      (Number(state.settings.autoBackupCounter) || 0) + increment;
+    if (state.settings.autoBackupCounter >= 5) {
+      const snapshot = createAutoBackup("count");
+      if (snapshot) state.settings.autoBackupCounter = 0;
+    }
+  }
+
+  function autoBackupReasonLabel(reason) {
+    return {
+      timer: "自动",
+      leave: "离开页面",
+      manual: "手动",
+      first: "首次",
+      count: "满5次内容",
+      "before-restore": "恢复前保护",
+    }[reason] || "自动";
+  }
+
+  function renderAutoBackupList() {
+    const container = document.getElementById("autoBackupList");
+    if (!container) return;
+    const progress = document.getElementById("autoBackupProgress");
+    if (progress) {
+      progress.textContent = state.settings.autoBackup
+        ? `已累计 ${Number(state.settings.autoBackupCounter) || 0}/5 次内容变更，满 5 次自动备份。`
+        : "自动备份已关闭。";
+    }
+    const list = loadAutoBackups();
+    if (!list.length) {
+      container.innerHTML = `<div class="auto-backup-empty">还没有自动备份。</div>`;
+      return;
+    }
+    container.innerHTML = list
+      .map((snapshot) => {
+        const time = new Date(snapshot.createdAt).toLocaleString("zh-CN");
+        return `
+          <div class="auto-backup-row">
+            <div class="auto-backup-meta">
+              <div class="auto-backup-time">${escapeHtml(time)}</div>
+              <div class="auto-backup-counts">
+                ${escapeHtml(autoBackupReasonLabel(snapshot.reason))} ·
+                ${snapshot.questions.length} 题 ·
+                ${(snapshot.mnemonics || []).length} 条口诀 ·
+                ${(snapshot.cautions || []).length} 条注意
+              </div>
+            </div>
+            <button class="btn btn-small" type="button" data-auto-backup-id="${escapeHtml(snapshot.id)}">
+              恢复
+            </button>
+          </div>
+        `;
+      })
+      .join("");
+  }
+
+  function restoreAutoBackup(id) {
+    const snapshot = loadAutoBackups().find((item) => item.id === id);
+    if (!snapshot) return;
+    if (!window.confirm("确定用这份浏览器自动备份覆盖当前题库吗？当前内容会先自动备份一份。")) {
+      return;
+    }
+    createAutoBackup("before-restore", true);
+    state.questions = snapshot.questions.map(normalizeStoredQuestion).filter(Boolean);
+    state.mnemonics = (snapshot.mnemonics || []).map(normalizeMnemonic).filter(Boolean);
+    state.cautions = (snapshot.cautions || []).map(normalizeCaution).filter(Boolean);
+    state.currentId = null;
+    state.filter = "all";
+    state.subject = "all";
+    state.query = "";
+    ui.mnemonicQuery = "";
+    ui.mnemonicSubject = "all";
+    ui.cautionQuery = "";
+    ui.cautionSubject = "all";
+    ui.cautionStatus = "all";
+    ui.selection = [];
+    ui.revealed = false;
+    state.settings.autoBackupCounter = 0;
+    saveState();
+    closeBackupModal();
+    renderAll();
+    toast(
+      `已恢复自动备份：${state.questions.length} 题、${state.mnemonics.length} 条口诀、${state.cautions.length} 条注意`,
+    );
   }
 
   function getFiltered() {
@@ -3278,6 +3568,9 @@ kbd {
             ${icon(question.mastered ? "check-circle" : "check")}
             ${question.mastered ? "已掌握" : "标记掌握"}
           </button>
+          <button class="icon-btn" type="button" data-action="edit-question" aria-label="编辑题目" title="编辑题目">
+            ${icon("edit")}
+          </button>
           <button class="icon-btn" type="button" data-action="delete" aria-label="删除本题" title="删除本题">
             ${icon("trash")}
           </button>
@@ -3476,6 +3769,7 @@ kbd {
     state.currentId = null;
     ui.selection = [];
     ui.revealed = false;
+    markContentChange(1);
     saveState();
     renderAll();
     toast("已删除题目");
@@ -3508,6 +3802,7 @@ kbd {
       state.currentId = added[0].id;
       ui.selection = [];
       ui.revealed = false;
+      markContentChange(added.length);
       saveState();
       renderAll();
     }
@@ -3711,6 +4006,7 @@ kbd {
       });
     }
 
+    markContentChange(1);
     saveState();
     closeMnemonicModal();
     renderAll();
@@ -3722,6 +4018,7 @@ kbd {
     if (!target) return;
     if (!window.confirm(`确定删除口诀“${target.title}”吗？`)) return;
     state.mnemonics = state.mnemonics.filter((item) => item.id !== id);
+    markContentChange(1);
     saveState();
     renderAll();
     toast("已删除口诀");
@@ -3943,6 +4240,7 @@ kbd {
       });
     }
 
+    markContentChange(1);
     saveState();
     closeCautionModal();
     renderAll();
@@ -3954,6 +4252,7 @@ kbd {
     if (!target) return;
     if (!window.confirm(`确定删除注意“${target.title}”吗？`)) return;
     state.cautions = state.cautions.filter((item) => item.id !== id);
+    markContentChange(1);
     saveState();
     renderAll();
     toast("已删除注意");
@@ -3964,6 +4263,7 @@ kbd {
     if (!target) return;
     target.pinned = !target.pinned;
     target.updatedAt = Date.now();
+    markContentChange(added);
     saveState();
     renderAll();
     toast(target.pinned ? "已置顶" : "已取消置顶");
@@ -4013,9 +4313,293 @@ kbd {
       toast("示例注意已经存在");
       return;
     }
+    markContentChange(added);
     saveState();
     renderAll();
     toast(`已载入 ${added} 条示例注意`);
+  }
+
+  function addEditorOptionRow(text = "", correct = false) {
+    const container = document.getElementById("editOptions");
+    if (!container) return;
+    if (container.querySelectorAll(".edit-option-row").length >= 6) {
+      toast("最多支持 6 个选项");
+      return;
+    }
+    const row = document.createElement("div");
+    row.className = "edit-option-row";
+    row.innerHTML = `
+      <span class="option-key"></span>
+      <input class="text-input edit-option-text" placeholder="选项内容">
+      <label class="correct-toggle">
+        <input type="checkbox" class="edit-option-correct">
+        正确
+      </label>
+      <button class="icon-btn edit-option-remove" type="button" aria-label="删除选项" title="删除选项">
+        ${icon("x")}
+      </button>
+    `;
+    row.querySelector(".edit-option-text").value = text;
+    row.querySelector(".edit-option-correct").checked = correct;
+    container.appendChild(row);
+    refreshEditorOptionLabels();
+  }
+
+  function refreshEditorOptionLabels() {
+    document.querySelectorAll("#editOptions .edit-option-row").forEach((row, index) => {
+      const label = row.querySelector(".option-key");
+      if (label) label.textContent = letterAt(index);
+    });
+  }
+
+  function openQuestionEditor() {
+    const question = getCurrentQuestion();
+    if (!question || ui.modalOpen) return;
+    ui.modalOpen = true;
+    ui.lastFocus = document.activeElement;
+    ui.editingQuestionId = question.id;
+    const isCase = Boolean(question.caseId);
+    const subjects = [
+      ...new Set(state.questions.map((item) => item.subject).filter(Boolean)),
+    ].sort((a, b) => a.localeCompare(b, "zh-Hans-CN"));
+    const optionRows = question.options
+      .map((option, index) => {
+        const key = letterAt(index);
+        const correct = question.answer.includes(key);
+        return `
+          <div class="edit-option-row">
+            <span class="option-key">${key}</span>
+            <input class="text-input edit-option-text" value="${escapeHtml(option.text)}" placeholder="选项内容">
+            <label class="correct-toggle">
+              <input type="checkbox" class="edit-option-correct" ${correct ? "checked" : ""}>
+              正确
+            </label>
+            <button class="icon-btn edit-option-remove" type="button" aria-label="删除选项" title="删除选项">
+              ${icon("x")}
+            </button>
+          </div>
+        `;
+      })
+      .join("");
+
+    els.modalRoot.innerHTML = `
+      <div class="modal-overlay" id="questionEditorModal">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="questionEditorTitle">
+          <div class="modal-head">
+            <div>
+              <h2 id="questionEditorTitle">编辑题目</h2>
+              <p class="modal-sub">修改题干、选项、答案和解析；作答记录和笔记会保留。</p>
+            </div>
+            <button class="icon-btn" type="button" id="closeQuestionEditor" aria-label="关闭编辑窗口" title="关闭">
+              ${icon("close")}
+            </button>
+          </div>
+
+          <form id="questionEditorForm">
+            <label class="field">
+              <span>题干</span>
+              <textarea class="note-area" id="editStem" required placeholder="输入题干">${escapeHtml(question.stem)}</textarea>
+            </label>
+
+            ${
+              isCase
+                ? `
+                  <div class="case-edit-fields">
+                    <label class="field">
+                      <span>病例标题</span>
+                      <input class="text-input" id="editCaseTitle" value="${escapeHtml(question.caseTitle || "病例题")}">
+                    </label>
+                    <label class="field">
+                      <span>病例描述</span>
+                      <textarea class="note-area" id="editCaseText" required>${escapeHtml(question.caseText || "")}</textarea>
+                    </label>
+                    <p class="editor-hint">修改病例标题或描述，会同步到本病例的所有小问。</p>
+                  </div>
+                `
+                : ""
+            }
+
+            <div class="field">
+              <span>选项与正确答案</span>
+              <div class="edit-options" id="editOptions">${optionRows}</div>
+              <button class="btn btn-small" type="button" id="addOptionBtn">
+                ${icon("plus")}添加选项
+              </button>
+              <p class="editor-hint">单选只勾一个“正确”，多选可以勾多个。</p>
+            </div>
+
+            <label class="field">
+              <span>解析</span>
+              <textarea class="note-area" id="editExplanation" placeholder="输入解析">${escapeHtml(question.explanation || "")}</textarea>
+            </label>
+
+            <div class="form-grid">
+              <label class="field">
+                <span>学科</span>
+                <input class="text-input" id="editSubject" list="editSubjects" value="${escapeHtml(question.subject)}">
+              </label>
+              <label class="field">
+                <span>标签</span>
+                <input class="text-input" id="editTags" value="${escapeHtml(question.tags.join(", "))}" placeholder="用逗号分隔">
+              </label>
+            </div>
+            <datalist id="editSubjects">
+              ${subjects.map((item) => `<option value="${escapeHtml(item)}"></option>`).join("")}
+            </datalist>
+
+            <div class="modal-foot">
+              <span class="spacer"></span>
+              <button class="btn" type="button" id="cancelQuestionEditor">取消</button>
+              <button class="btn btn-primary" type="submit">保存修改</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+    document.body.classList.add("modal-open");
+
+    const close = () => closeQuestionEditor();
+    document.getElementById("closeQuestionEditor").addEventListener("click", close);
+    document.getElementById("cancelQuestionEditor").addEventListener("click", close);
+    document.getElementById("questionEditorModal").addEventListener("click", (event) => {
+      if (event.target.id === "questionEditorModal") close();
+    });
+    document.getElementById("addOptionBtn").addEventListener("click", () => addEditorOptionRow());
+    document.getElementById("editOptions").addEventListener("click", (event) => {
+      const remove = event.target.closest(".edit-option-remove");
+      if (!remove) return;
+      const rows = document.querySelectorAll("#editOptions .edit-option-row");
+      if (rows.length <= 2) {
+        toast("至少保留两个选项");
+        return;
+      }
+      remove.closest(".edit-option-row").remove();
+      refreshEditorOptionLabels();
+    });
+    document.getElementById("questionEditorForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      saveQuestionEditor();
+    });
+    document.addEventListener("keydown", handleQuestionEditorKeydown);
+    window.requestAnimationFrame(() => {
+      const input = document.getElementById("editStem");
+      if (input) input.focus();
+    });
+  }
+
+  function closeQuestionEditor() {
+    if (!ui.modalOpen) return;
+    ui.modalOpen = false;
+    ui.editingQuestionId = null;
+    els.modalRoot.innerHTML = "";
+    document.body.classList.remove("modal-open");
+    document.removeEventListener("keydown", handleQuestionEditorKeydown);
+    if (ui.lastFocus && ui.lastFocus.isConnected) {
+      ui.lastFocus.focus({ preventScroll: true });
+    }
+    ui.lastFocus = null;
+  }
+
+  function handleQuestionEditorKeydown(event) {
+    if (!ui.modalOpen) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeQuestionEditor();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const modal = document.querySelector("#questionEditorModal .modal");
+    if (!modal) return;
+    const focusables = [
+      ...modal.querySelectorAll(
+        'button, [href], input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"])',
+      ),
+    ].filter((element) => !element.disabled && element.offsetParent !== null);
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  function saveQuestionEditor() {
+    const question = state.questions.find((item) => item.id === ui.editingQuestionId);
+    if (!question) return;
+    const stem = document.getElementById("editStem")?.value.trim() || "";
+    if (!stem) {
+      toast("题干不能为空");
+      document.getElementById("editStem")?.focus();
+      return;
+    }
+
+    const rows = [...document.querySelectorAll("#editOptions .edit-option-row")];
+    const options = [];
+    const answer = [];
+    rows.forEach((row) => {
+      const text = row.querySelector(".edit-option-text")?.value.trim() || "";
+      if (!text) return;
+      const key = letterAt(options.length);
+      options.push({ key, text });
+      if (row.querySelector(".edit-option-correct")?.checked) answer.push(key);
+    });
+    if (options.length < 2) {
+      toast("至少需要两个有效选项");
+      return;
+    }
+    if (!answer.length) {
+      toast("请至少勾选一个正确选项");
+      return;
+    }
+
+    const isCase = Boolean(question.caseId);
+    const caseTitle = isCase
+      ? document.getElementById("editCaseTitle")?.value.trim() || "病例题"
+      : question.caseTitle;
+    const caseText = isCase
+      ? document.getElementById("editCaseText")?.value.trim() || ""
+      : question.caseText;
+    if (isCase && !caseText) {
+      toast("病例描述不能为空");
+      document.getElementById("editCaseText")?.focus();
+      return;
+    }
+
+    const tags = (document.getElementById("editTags")?.value || "")
+      .split(/[,，、;；]/)
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+    const now = Date.now();
+    Object.assign(question, {
+      stem,
+      options,
+      answer: answer.sort().join(""),
+      explanation: document.getElementById("editExplanation")?.value.trim() || "",
+      subject: document.getElementById("editSubject")?.value.trim() || "未分类",
+      tags: [...new Set(tags)].slice(0, 6),
+      updatedAt: now,
+    });
+
+    if (isCase) {
+      state.questions
+        .filter((item) => item.caseId === question.caseId)
+        .forEach((item) => {
+          item.caseTitle = caseTitle;
+          item.caseText = caseText;
+        });
+    }
+
+    ui.selection = [];
+    ui.revealed = false;
+    markContentChange(1);
+    saveState();
+    closeQuestionEditor();
+    renderAll();
+    toast("题目已更新");
   }
 
   function exportData() {
@@ -4128,6 +4712,18 @@ kbd {
           </div>
 
           <div class="backup-section">
+            <h3>浏览器自动备份</h3>
+            <p>每新增或修改 5 次内容自动备份一次，最多保留最近 ${AUTO_BACKUP_LIMIT} 份；只存在当前浏览器，清理浏览器数据会一起删除。</p>
+            <label class="check-row">
+              <input type="checkbox" id="autoBackupToggle" ${state.settings.autoBackup ? "checked" : ""}>
+              开启自动备份
+            </label>
+            <button class="btn btn-small" type="button" id="manualBackupBtn">立即备份</button>
+            <div class="auto-backup-progress" id="autoBackupProgress"></div>
+            <div class="auto-backup-list" id="autoBackupList"></div>
+          </div>
+
+          <div class="backup-section">
             <h3>恢复备份</h3>
             <p>选择之前导出的 JSON，先检查内容，再决定合并还是覆盖。</p>
 
@@ -4175,6 +4771,29 @@ kbd {
     const close = () => closeBackupModal();
     document.getElementById("closeBackup").addEventListener("click", close);
     document.getElementById("downloadBackupBtn").addEventListener("click", exportData);
+    document.getElementById("autoBackupToggle").addEventListener("change", (event) => {
+      state.settings.autoBackup = event.target.checked;
+      state.settings.autoBackupCounter = 0;
+      saveState();
+      if (state.settings.autoBackup) {
+        createAutoBackup("manual", true);
+        renderAutoBackupList();
+      }
+      toast(state.settings.autoBackup ? "已开启自动备份" : "已关闭自动备份");
+    });
+    document.getElementById("manualBackupBtn").addEventListener("click", () => {
+      const snapshot = createAutoBackup("manual", true);
+      if (snapshot) {
+        state.settings.autoBackupCounter = 0;
+        saveState();
+      }
+      renderAutoBackupList();
+      toast(snapshot ? "已创建浏览器自动备份" : "内容没有变化，无需重复备份");
+    });
+    document.getElementById("autoBackupList").addEventListener("click", (event) => {
+      const button = event.target.closest("[data-auto-backup-id]");
+      if (button) restoreAutoBackup(button.dataset.autoBackupId);
+    });
     document.getElementById("previewBackupBtn").addEventListener("click", () => {
       previewBackup();
     });
@@ -4222,6 +4841,7 @@ kbd {
     });
 
     document.addEventListener("keydown", handleBackupModalKeydown);
+    renderAutoBackupList();
     window.requestAnimationFrame(() => textArea.focus());
   }
 
@@ -4378,6 +4998,7 @@ kbd {
       state.query = "";
       ui.mnemonicQuery = "";
       ui.mnemonicSubject = "all";
+      state.settings.autoBackupCounter = 0;
       saveState();
       closeBackupModal();
       renderAll();
@@ -4388,6 +5009,7 @@ kbd {
     }
 
     const result = mergeBackupData(backup);
+    state.settings.autoBackupCounter = 0;
     saveState();
     closeBackupModal();
     renderAll();
@@ -4412,6 +5034,7 @@ kbd {
 
     window.clearTimeout(ui.noteTimer);
     ui.noteTimer = window.setTimeout(() => {
+      markContentChange(1);
       saveState();
       ui.noteDirty = false;
       const currentStatus = document.getElementById("noteStatus");
@@ -4425,6 +5048,7 @@ kbd {
       ui.noteTimer = null;
     }
     if (ui.noteDirty && ui.noteTarget) {
+      markContentChange(1);
       saveState();
       ui.noteDirty = false;
     }
@@ -4456,6 +5080,7 @@ kbd {
       else if (action === "case-next") navigateCase(1);
       else if (action === "master") toggleMastered();
       else if (action === "delete") deleteQuestion();
+      else if (action === "edit-question") openQuestionEditor();
       else if (action === "make-mnemonic") makeMnemonicFromQuestion();
       else if (action === "make-caution") makeCautionFromQuestion();
       else if (action === "open-import") openImportModal();
@@ -5557,18 +6182,27 @@ D. 选项四
     if (!window.confirm("确定清空全部题目、作答记录和笔记吗？此操作不可撤销。")) return;
 
     state.questions = [];
+    state.mnemonics = [];
+    state.cautions = [];
     state.currentId = null;
     state.filter = "all";
     state.subject = "all";
     state.query = "";
+    state.settings.autoBackupCounter = 0;
     els.searchInput.value = "";
     ui.selection = [];
     ui.revealed = false;
     ui.noteDirty = false;
+    ui.mnemonicQuery = "";
+    ui.mnemonicSubject = "all";
+    ui.cautionQuery = "";
+    ui.cautionSubject = "all";
+    ui.cautionStatus = "all";
     window.clearTimeout(ui.noteTimer);
 
     try {
       window.localStorage.removeItem(STORAGE_KEY);
+      window.localStorage.removeItem(AUTO_BACKUP_KEY);
     } catch (error) {
       /* 本地存储不可用时只清空内存 */
     }
@@ -5748,6 +6382,14 @@ D. 选项四
 
   function init() {
     loadState();
+    const backups = loadAutoBackups();
+    if (
+      state.settings.autoBackup &&
+      !backups.length &&
+      (state.questions.length || state.mnemonics.length || state.cautions.length)
+    ) {
+      createAutoBackup("first");
+    }
     bindEvents();
     renderAll();
     if (!storageAvailable) {
