@@ -2227,7 +2227,7 @@ kbd {
   </section>
 
   <footer class="footer">
-    <div>数据仅保存在当前浏览器，不会上传到服务器。<span class="app-version">v2026.10.20.2</span></div>
+    <div>数据仅保存在当前浏览器，不会上传到服务器。<span class="app-version">v2026.10.20.3</span></div>
     <div class="keys" aria-label="键盘快捷键">
       <kbd>A</kbd><span>–</span><kbd>E</kbd><span>选择</span>
       <span>·</span>
@@ -4998,10 +4998,13 @@ kbd {
           <div class="ocr-tip">截图识别在本机浏览器内完成，图片不会上传到服务器。也可以直接按 Ctrl+V 粘贴截图。</div>
 
           <div class="template-row">
+            <button class="btn btn-small" type="button" id="insertQuestionTemplateBtn">
+              ${icon("plus")}插入普通题模板
+            </button>
             <button class="btn btn-small" type="button" id="insertCaseTemplateBtn">
               ${icon("plus")}插入病例题模板
             </button>
-            <span>病例题 = 一份总病例描述 + 多个【第n问】</span>
+            <span>普通题 = 一题一答；病例题 = 总病例描述 + 多个【第n问】</span>
           </div>
 
           <div class="divider">或直接粘贴</div>
@@ -5106,6 +5109,23 @@ D. 选项四
     showImportResult("", "ok", true);
   }
 
+  function insertQuestionTemplate() {
+    const area = document.getElementById("importText");
+    if (!area) return;
+    const template = `1. 在这里写题干
+A. 选项一
+B. 选项二
+C. 选项三
+D. 选项四
+答案：C
+解析：在这里写解析
+学科：内科学
+标签：标签1, 标签2`;
+    area.value = area.value.trim() ? `${area.value.trim()}\n\n${template}` : template;
+    area.focus();
+    showImportResult("", "ok", true);
+  }
+
   function openImportModal() {
     if (ui.modalOpen) return;
     ui.modalOpen = true;
@@ -5173,6 +5193,7 @@ D. 选项四
     });
 
     importText.addEventListener("input", () => showImportResult("", "ok", true));
+    document.getElementById("insertQuestionTemplateBtn").addEventListener("click", insertQuestionTemplate);
     document.getElementById("insertCaseTemplateBtn").addEventListener("click", insertCaseTemplate);
     document.getElementById("confirmImportBtn").addEventListener("click", doImport);
     document.getElementById("clearDataBtn").addEventListener("click", clearAllData);
